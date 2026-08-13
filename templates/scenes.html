@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>
+Scenes
+</h1>
+
+
+<div class="card">
+
+<form action="/scenes/add" method="post">
+
+<h3>
+Add scene
+</h3>
+
+<div class="form-grid">
+
+<input
+class="btna"
+placeholder="Name"
+name="name"
+required>
+
+
+<button
+class="btn-primary"
+type="submit">
+
+Add
+
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+
+
+
+<div class="card">
+
+<h3>
+Scene List
+</h3>
+
+
+<div class="table-wrapper">
+
+<table>
+
+<tr>
+
+<th>
+Name
+</th>
+
+<th>
+Channels
+</th>
+
+<th>
+Actions
+</th>
+
+</tr>
+
+
+{% for scene in scenes %}
+
+<tr>
+
+<td>
+{{ scene.name }}
+</td>
+
+
+<td>
+{{ scene["devices"]|length }}
+</td>
+
+
+<td>
+
+<button
+onclick="window.location.href='/scenes/edit?id={{ scene.id }}'"
+class="btna"
+style="background:#292929;">
+
+Edit
+
+</button>
+<button
+    onclick="window.location.href='/scenes/duplicate?id={{ scene.id }}'"
+    class="btn-secondary"
+    style="background:#292929;">
+    Duplicate
+</button>
+
+</td>
+
+</tr>
+
+
+{% endfor %}
+
+</table>
+
+</div>
+
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,15 @@
+{
+    "type": "settings",
+    "version": 1,
+    "data": {
+        "network_mode": "lan",
+        "port": 5000,
+        "refresh_rate": 50,
+        "create_qr": true,
+        "mode": "edit",
+        "timing-global-record": "r",
+        "timing-global-sim": "t",
+        "timing-live": "e",
+        "timing-mode": "live"
+    }
+}

@@ -1,0 +1,90 @@
+<div class="card">
+
+    <h3>Live Timing</h3>
+
+    <div style="text-align: center;">
+            <h2>Hotkey</h2>
+        <button
+            id="hotkeyButtonLive"
+            class="btna"
+            onclick="startLivePlayKeyRecording()">
+            Record Hotkey
+        </button>
+
+        <p id="hotkeyDisplayLive">
+            {% if timing_live_key %}
+            Current Hotkey: {{ timing_live_key }}
+            {% else %}
+            No Hotkey
+            {% endif %}
+        </p>
+
+    </div>
+
+
+    <div
+        id="timer"
+        style="
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            margin: 30px 0;
+        "
+    >
+        0.000 s
+    </div>
+    
+    <div
+        style="
+            display: flex;
+            gap: 10px;
+            justify-content: center;">
+        <button
+            id="copyButton"
+            class="btna"
+            onclick="copyTimer(this)">
+            Copy
+        </button>
+        <button
+            id="recordButton"
+            class="btn-primary"
+            onclick="toggleTimer()">
+            Record
+        </button>
+
+        <button
+            class="btn-secondary"
+            onclick="resetTimer()">
+            Reset
+        </button>
+        <select
+            id="unitSelect"
+            onchange="updateDisplay()"
+            class="btna">
+
+            <option value="ms">
+                Milliseconds
+            </option>
+
+            <option value="s" selected>
+                Seconds
+            </option>
+
+            <option value="min">
+                Minutes
+            </option>
+
+        </select>
+    </div>
+
+
+    <div style="margin-top: 20px;">
+
+        
+
+    </div>
+
+</div>
+<script>
+    let recordKey = {{ timing_live_key | tojson }};
+</script>

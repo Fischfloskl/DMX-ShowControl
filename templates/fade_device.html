@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+
+<h1>
+{{device.name}}
+</h1>
+
+
+<form action="/fades/device/save" method="post">
+
+<button
+type="submit"
+class="btn-success">
+
+Save
+
+</button>
+
+
+
+<button
+class="btna"
+type="button"
+onclick="window.location.href='/fades/edit?id={{fade.id}}'">
+
+Cancel
+
+</button>
+
+<br><br>
+
+<input
+type="hidden"
+name="fade_id"
+value="{{fade.id}}">
+
+
+<input
+type="hidden"
+name="device_id"
+value="{{device.id}}">
+
+
+
+<div class="card">
+
+
+<h2>
+Channels
+</h2>
+
+
+
+<div class="mode-selector">
+
+
+<label class="mode-option">
+
+<input
+type="radio"
+name="mode"
+value="merge"
+{% if fade.get("mode","merge") == "merge" %}
+checked
+{% endif %}
+>
+
+<div class="mode-card">
+
+<strong>
+Merge
+</strong>
+
+<span>
+Change only active channels
+</span>
+
+</div>
+
+</label>
+
+
+
+<label class="mode-option">
+
+<input
+type="radio"
+name="mode"
+value="overwrite"
+{% if fade.get("mode") == "overwrite" %}
+checked
+{% endif %}
+>
+
+<div class="mode-card">
+
+<strong>
+Overwrite
+</strong>
+
+<span>
+Replace the entire device
+</span>
+
+</div>
+
+</label>
+
+
+
+
+<label class="mode-option">
+
+<input
+type="radio"
+name="mode"
+value="exclusive"
+{% if fade.get("mode") == "exclusive" %}
+checked
+{% endif %}
+>
+
+<div class="mode-card">
+
+<strong>
+Exclusive
+</strong>
+
+<span>
+Take control of the device
+</span>
+
+</div>
+
+</label>
+
+
+</div>
+
+<br>
+<br>
+
+
+
+{% for i in range(1,device.channels+1) %}
+
+
+<div class="action-card">
+
+
+<h3>
+Channel {{i}} - {{device.channel_names[i-1]}}
+</h3>
+
+
+
+<label>
+
+<input
+type="checkbox"
+class="checkbox"
+name="enable_{{i}}"
+
+{% if channels.get(i,{}).get("enabled") %}
+checked
+{% endif %}
+
+>
+
+Active
+
+</label>
+
+
+<br><br>
+
+
+
+<label>
+Start-value
+</label>
+
+<input
+class="btna"
+type="number"
+name="start_{{i}}"
+value="{{channels.get(i,{}).get('start',0)}}"
+min="0"
+max="255">
+
+
+
+<label>
+End-value
+</label>
+
+<input
+class="btna"
+type="number"
+name="end_{{i}}"
+value="{{channels.get(i,{}).get('end',255)}}"
+min="0"
+max="255">
+
+
+</div>
+
+
+<br>
+<br>
+<br>
+
+
+{% endfor %}
+
+
+
+<button
+type="submit"
+class="btn-success">
+
+Save
+
+</button>
+
+
+
+<button
+class="btna"
+type="button"
+onclick="window.location.href='/fades/edit?id={{fade.id}}'">
+
+Cancel
+
+</button>
+
+
+
+</div>
+
+
+</form>
+
+
+
+{% endblock %}

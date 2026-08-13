@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<h1>
+Trigger
+</h1>
+
+
+
+<div class="card">
+
+
+<div class="scene-actions">
+
+
+<button
+class="btn-success"
+onclick="window.location.href='/triggers/add'">
+
++ Add Trigger
+
+</button>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="table-wrapper">
+
+
+<table>
+
+
+<thead>
+
+<tr>
+
+<th>
+Status
+</th>
+
+<th>
+Name
+</th>
+
+<th>
+Type
+</th>
+
+<th>
+Hotkey/MIDI
+</th>
+
+<th>
+Actions
+</th>
+
+<th>
+</th>
+
+</tr>
+
+
+</thead>
+
+
+
+<tbody>
+
+
+{% for trigger in triggers %}
+
+
+<tr>
+
+
+<td>
+
+
+{% if trigger.enabled %}
+
+<span class="status-green">
+Active
+</span>
+
+
+{% else %}
+
+<span class="status-red">
+Off
+</span>
+
+
+{% endif %}
+
+
+</td>
+
+
+
+
+
+<td>
+
+{{ trigger.name }}
+
+</td>
+
+
+
+
+
+<td>
+
+{{ trigger.type }}
+
+</td>
+
+
+
+
+
+<td>
+
+
+{% if trigger.type == "keyboard" %}
+
+
+{% for key in trigger["keys"] %}
+
+
+<span class="key-tag">
+
+{{ key }}
+
+</span>
+
+
+{% if not loop.last %}
++
+{% endif %}
+
+
+{% endfor %}
+
+
+{% else %}
+
+
+{{ trigger.input }}
+
+
+{% endif %}
+
+
+
+</td>
+
+
+
+
+
+
+
+<td>
+
+
+{% for action in trigger.actions %}
+
+
+<div>
+
+
+{% if action.type == "scene" %}
+
+<b>Scene:</b> {{ action.target }}
+
+
+{% elif action.type == "sequence" %}
+
+<b>Seq:</b> {{ action.target }}
+
+
+{% else %}
+
+<b>{{ action.type }}:</b>
+{{ action.target }}
+
+
+{% endif %}
+
+
+</div>
+
+
+{% endfor %}
+
+
+
+</td>
+
+
+
+
+
+
+<td>
+
+
+<button
+
+class="btn-primary"
+style="background:#292929;"
+
+onclick="window.location.href='/triggers/edit?id={{ trigger.id }}'">
+
+Edit
+
+</button>
+
+
+<button
+    onclick="window.location.href='/triggers/duplicate?id={{ trigger.id }}'"
+    class="btn-secondary"
+    style="background:#292929;">
+    Duplicate
+</button>
+
+<button
+
+class="btn-danger"
+
+onclick="deleteTrigger({{ trigger.id }})">
+
+Delete
+
+</button>
+<button
+
+class="btn-success"
+
+onclick="execute_trigger({{ trigger.id }})">
+
+Start
+
+</button>
+
+</td>
+
+
+</tr>
+
+
+
+{% endfor %}
+
+
+</tbody>
+
+
+</table>
+
+
+</div>
+
+
+
+
+
+
+<script>
+
+function execute_trigger(id){
+
+
+    fetch(
+        "/triggers/execute?id="+id
+    );
+}
+function deleteTrigger(id){
+
+
+    if(confirm(
+        "Do you really wawnt to delete this trigger?"
+    )){
+
+
+        window.location.href =
+        "/triggers/delete?id=" + id;
+
+
+    }
+
+
+}
+
+
+</script>
+
+
+
+{% endblock %}

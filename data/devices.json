@@ -1,0 +1,44 @@
+{
+    "type": "devices",
+    "version": 1,
+    "data": [
+        {
+            "id": 1,
+            "name": "Light4me Twinbeam 210 wash",
+            "start_channel": 1,
+            "channels": 15,
+            "color": "#ff8800",
+            "channel_names": [
+                "PAN",
+                "TILT",
+                "ROTATE",
+                "ROTATE SPEED",
+                "MASTER",
+                "ROT",
+                "GR\u00dcN",
+                "BLAU",
+                "WEISS",
+                "STROBE",
+                "MOTOR MACRO",
+                "MACRO SPEED",
+                "LICHT MACRO",
+                "MACRO SPEED",
+                "RESET AFTER 5 SEC"
+            ]
+        },
+        {
+            "id": 2,
+            "name": "Eurolite PARty TCL Spot",
+            "start_channel": 25,
+            "channels": 5,
+            "color": "#0055ff",
+            "channel_names": [
+                "Rot",
+                "Gr\u00fcn",
+                "Blau",
+                "Master Dimmer",
+                "Effekte (strobe, musik)"
+            ]
+        }
+    ]
+}

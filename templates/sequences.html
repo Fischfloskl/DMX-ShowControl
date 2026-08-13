@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+
+<h1>
+Sequences
+</h1>
+
+
+
+
+<div class="card">
+
+
+<div class="scene-actions">
+
+
+<button
+class="btn-primary"
+onclick="window.location.href='/sequences/add'">
+
++ Add sequence
+
+</button>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="card">
+
+
+<h2>
+Saved sequences
+</h2>
+
+
+
+<div class="tablewrapper">
+
+
+<table>
+
+
+
+<thead>
+
+
+<tr>
+
+<th>
+Name
+</th>
+
+
+<th>
+Steps
+</th>
+
+
+<th>
+Duration
+</th>
+
+
+<th>
+Actions
+</th>
+
+
+</tr>
+
+
+</thead>
+
+
+
+
+<tbody>
+
+
+
+
+{% for seq in sequences %}
+
+
+<tr>
+
+
+
+<td>
+
+{{ seq.name }}
+
+</td>
+
+
+
+<td>
+
+{{ seq.steps|length }}
+
+</td>
+
+
+
+
+<td>
+
+
+<p>
+{{ seq.steps | duration }}
+</p>
+
+
+</td>
+
+
+
+
+<td>
+
+
+<div class="scene-actions">
+
+
+<button
+class="btn-success"
+onclick="startSequence({{seq.id}})">
+
+Apply Seq. to DMX
+
+</button>
+
+
+
+<button
+class="btna"
+style="background:#292929;"
+onclick="clearDMX()">
+
+Clear DMX
+
+</button>
+
+
+
+<button
+class="btn-primary"
+style="background:#292929;"
+onclick="window.location.href='/sequences/edit?id={{seq.id}}'">
+
+Edit
+
+</button>
+
+<button
+    onclick="window.location.href='/sequences/duplicate?id={{ seq.id }}'"
+    class="btn-secondary"
+    style="background:#292929;">
+    Duplicate
+</button>
+
+<button
+class="btn-danger"
+onclick="deleteSequence({{seq.id}})">
+
+Delete
+
+</button>
+
+
+</div>
+
+
+</td>
+
+
+</tr>
+
+
+
+{% endfor %}
+
+
+
+</tbody>
+
+
+
+</table>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<script>
+
+
+
+function startSequence(id){
+
+
+fetch(
+"/sequences/start?id="+id
+);
+
+
+}
+
+
+function deleteSequence(id){
+
+
+if(confirm(
+"Do you really want to delete this sequnce?"
+)){
+
+
+window.location.href =
+"/sequences/delete?id="+id;
+
+
+}
+
+
+}
+
+async function clearDMX(){
+
+    await fetch("/dmx/clear");
+
+}
+
+</script>
+
+
+
+
+{% endblock %}

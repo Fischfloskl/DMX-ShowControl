@@ -1,0 +1,9 @@
+Flask
+Flask-SocketIO
+python-socketio
+python-engineio
+simple-websocket
+keyboard
+pyserial
+qrcode
+Pillow

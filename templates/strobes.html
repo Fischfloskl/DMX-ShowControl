@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>
+    Strobes
+</h1>
+
+
+<div class="card">
+
+    <div class="scene-actions">
+
+        <button
+            class="btn-primary"
+            onclick="
+                window.location.href='/strobes/add'
+            "
+        >
+            + Add strobe-effekt
+        </button>
+
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <h2>
+        Saved strobes
+    </h2>
+
+
+    <div class="tablewrapper">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        Name
+                    </th>
+
+                    <th>
+                        States
+                    </th>
+
+                    <th>
+                        Changes
+                    </th>
+
+                    <th>
+                        Timing
+                    </th>
+
+                    <th>
+                        Actions
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody>
+
+
+            {% for strobe in strobes %}
+
+            <tr>
+
+                <td>
+
+                    {{ strobe.name }}
+
+                </td>
+
+
+                <td>
+
+                    {{ strobe.states|length }}
+
+                </td>
+
+
+                <td>
+
+                    {{ strobe.cycles }}
+
+                </td>
+
+
+                <td>
+
+                    {{ strobe.time_a }}
+                    /
+                    {{ strobe.time_b }}
+                    ms
+
+                </td>
+
+
+                <td>
+
+                    <div class="scene-actions">
+
+
+                        <button
+                            class="btn-success"
+                            onclick="
+                                startStrobe(
+                                    {{ strobe.id }}
+                                )
+                            "
+                        >
+                            Apply effect to DMX
+                        </button>
+
+
+                        <button
+                            class="btna"
+                            style="background:#292929;"
+                            onclick="clearDMX()"
+                        >
+                            Clear DMX
+                        </button>
+
+
+                        <button
+                            class="btn-primary"
+                            style="background:#292929;"
+                            onclick="
+                                window.location.href=
+                                '/strobes/edit?id={{ strobe.id }}'
+                            "
+                        >
+                            Edit
+                        </button>
+
+
+                        <button
+                            class="btn-secondary"
+                            style="background:#292929;"
+                            onclick="
+                                window.location.href=
+                                '/strobes/duplicate?id={{ strobe.id }}'
+                            "
+                        >
+                            Duplicate
+                        </button>
+
+
+                        <button
+                            class="btn-danger"
+                            onclick="
+                                deleteStrobe(
+                                    {{ strobe.id }}
+                                )
+                            "
+                        >
+                            Delete
+                        </button>
+
+
+                    </div>
+
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+<script>
+
+
+function startStrobe(id) {
+
+    fetch(
+        "/strobes/start?id=" + id
+    );
+
+}
+
+
+function deleteStrobe(id) {
+
+    if (
+        confirm(
+            "Do you really want to delete this Strobe?"
+        )
+    ) {
+
+        window.location.href =
+            "/strobes/delete?id=" + id;
+
+    }
+
+}
+
+
+async function clearDMX() {
+
+    await fetch(
+        "/dmx/clear"
+    );
+
+}
+
+</script>
+
+{% endblock %}

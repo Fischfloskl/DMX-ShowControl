@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<h1>
+Edit device
+</h1>
+
+
+
+<div class="card">
+
+
+<h2>
+{{ device.name }}
+</h2>
+
+
+<p style="color:#999;">
+
+Scene: {{ scene.name }}
+
+</p>
+
+
+</div>
+
+
+
+
+
+<form action="/scenes/device/save" method="post">
+
+
+<div class="card">
+
+
+<div class="scene-actions">
+
+
+
+<button
+class="btn-success"
+type="submit">
+
+Save
+
+</button>
+
+
+
+
+<button
+type="button"
+class="btna"
+onclick="window.location.href='/scenes/edit?id={{ scene.id }}'">
+
+Cancel
+
+</button>
+
+
+
+
+<button
+type="button"
+class="btn-primary"
+onclick="applyDevice()">
+
+DMX Apply
+
+</button>
+
+
+
+
+<button
+type="button"
+class="btna"
+onclick="clearDMX()">
+
+DMX Clear
+
+</button>
+
+<button
+type="button"
+class="btn-danger"
+onclick="resetSliders()"
+>
+
+Reset Channels
+
+</button>
+
+<button
+type="button"
+class="btn-danger"
+onclick="removeDevice()">
+
+Delete device
+
+</button>
+
+
+
+</div>
+
+
+</div>
+
+<input
+type="hidden"
+name="scene_id"
+value="{{ scene.id }}">
+
+
+<input
+type="hidden"
+name="device_id"
+value="{{ device.id }}">
+
+
+
+
+
+<div class="card">
+
+
+<h3>
+DMX Channels
+</h3>
+
+
+
+
+{% for c in range(device.channels) %}
+
+
+{% set channel = c + 1 %}
+
+
+{% set value = scene.devices[device.id|string].get(channel|string, 0) %}
+
+
+
+
+<div class="channel-card">
+
+
+<div class="channel-header">
+
+
+<span class="channel-name">
+
+CH{{ channel }}:
+{{ device.channel_names[c] }}
+
+</span>
+
+
+
+<span
+class="channel-value"
+id="value_{{ channel }}">
+
+{% if value > 0 %}
+{{ value }}
+{% endif %}
+
+</span>
+
+
+</div>
+
+
+
+
+<div style="font-size:12px;color:#888;">
+
+DMX {{ device.start_channel + c }}
+
+</div>
+
+
+
+
+
+<input
+
+type="range"
+
+min="0"
+
+max="255"
+
+value="{{ value }}"
+
+name="ch_{{ channel }}"
+
+class="dmx-slider"
+
+oninput="updateSlider(this)"
+
+>
+
+
+
+</div>
+
+<br>
+<br>
+
+{% endfor %}
+
+
+
+</div>
+
+
+
+
+
+<div class="card">
+
+
+<div class="scene-actions">
+
+
+
+<button
+class="btn-success"
+type="submit">
+
+Save
+
+</button>
+
+
+
+
+<button
+type="button"
+class="btna"
+onclick="window.location.href='/scenes/edit?id={{ scene.id }}'">
+
+Cancel
+
+</button>
+
+
+
+
+<button
+type="button"
+class="btn-primary"
+onclick="applyDevice()">
+
+DMX Apply
+
+</button>
+
+
+
+
+<button
+type="button"
+class="btna"
+onclick="clearDMX()">
+
+DMX Clear
+
+</button>
+
+<button
+type="button"
+class="btn-danger"
+onclick="resetSliders()"
+>
+
+Reset Channels
+
+</button>
+
+<button
+type="button"
+class="btn-danger"
+onclick="removeDevice()">
+
+Delete device
+
+</button>
+
+
+
+</div>
+
+
+</div>
+
+
+
+</form>
+
+
+
+
+
+<script>
+
+
+function updateSlider(slider){
+
+
+    let card =
+        slider.closest(".channel-card");
+
+
+    let value =
+        card.querySelector(".channel-value");
+
+
+
+    if(slider.value == 0){
+
+        value.innerHTML="";
+    }
+
+    else{
+
+        value.innerHTML =
+            slider.value;
+
+    }
+
+
+}
+
+function resetSliders(){
+
+
+    if(confirm("Reset all sliders?")){
+
+
+        document
+        .querySelectorAll(
+            'input[type="range"]'
+        )
+        .forEach(
+            slider => {
+
+
+                slider.value = 0;
+
+
+                updateSlider(slider);
+
+
+            }
+        );
+
+
+    }
+
+}
+
+
+
+function clearFaders(){
+
+
+    document
+    .querySelectorAll(
+        'input[type="range"]'
+    )
+    .forEach(
+        slider => {
+
+            slider.value = 0;
+
+            updateSlider(slider);
+
+        }
+    );
+
+
+}
+
+
+
+
+function removeDevice(){
+
+
+    if(confirm("Remove device from scene?")){
+
+
+        window.location.href =
+        "/scenes/device/remove?scene={{ scene.id }}&device={{ device.id }}";
+
+
+    }
+
+
+}
+
+
+function applyDevice(){
+
+    let channels = {};
+
+    document.querySelectorAll(
+        "input[name^='ch_']"
+    ).forEach(input => {
+
+        let ch = input.name.replace("ch_", "");
+
+        channels[ch] = parseInt(input.value);
+
+    });
+
+
+    fetch("/dmx/apply_device_live", {
+
+        method: "POST",
+
+        headers:{
+            "Content-Type":"application/json"
+        },
+
+        body: JSON.stringify({
+
+            device_id: "{{ device.id }}",
+
+            channels: channels
+
+        })
+
+    })
+    .then(response => response.json())
+    .then(data => {
+
+        console.log(data);
+
+    });
+
+}
+
+async function clearDMX(){
+
+    await fetch("/dmx/clear");
+
+}
+
+</script>
+
+
+
+{% endblock %}

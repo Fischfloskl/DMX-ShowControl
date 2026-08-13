@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+<style>
+.color-circle{
+
+    width:22px;
+    height:22px;
+
+    border-radius:50%;
+
+    margin:auto;
+
+    border:2px solid rgba(255,255,255,0.2);
+
+    background:var(--color);
+}
+</style>
+
+<h1>
+Devices
+</h1>
+
+
+
+<div class="card">
+<form action="/devices/add" method="post">
+<h3>
+Add device
+</h3>
+
+
+<div class="form-grid">
+
+
+<input
+class="btna"
+placeholder="Name"
+name="name"
+required>
+
+
+<input
+class="btna"
+type="number"
+placeholder="Start-address"
+name="address"
+required>
+
+
+<input
+class="btna"
+type="number"
+placeholder="Number of channels"
+name="channels"
+required>
+
+<input
+name="color"
+type="color"
+style="height: 50px;"
+class="btna"
+value="#583757">
+
+<button class="btn-primary" type="submit">
+Add
+</button>
+
+
+</div>
+
+</form>
+</div>
+
+
+
+
+<div class="card">
+
+<h3>
+Device list
+</h3>
+
+
+<div class="table-wrapper">
+
+<table>
+
+<tr>
+
+<th style="width: auto;">
+Name
+</th>
+
+<th></th>
+
+<th>
+Address
+</th>
+
+<th>
+Channels
+</th>
+
+<th>
+Action
+</th>
+
+</tr>
+
+
+
+{% for d in devices %}
+
+<tr>
+
+<td style="width: auto;">
+{{ d.name }}
+</td>
+
+<td style="text-align:center;">
+<div class="color-circle" style="--color: {{ d.color }};"></div>
+</td>
+
+
+
+<td>
+{{ d.start_channel }}
+</td>
+
+
+<td>
+{{ d.channels }}
+</td>
+
+
+<td>
+
+<button onclick="window.location.href='/devices/edit?id={{ d.id }}'" class="btna" style="background: #292929;">
+Edit
+</button>
+
+<button onclick="window.location.href='/devices/duplicate?id={{ d.id }}'" class="btna" style="background: #292929;">
+Duplicate
+</button>
+
+</td>
+
+
+</tr>
+
+{% endfor %}
+
+
+
+</table>
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

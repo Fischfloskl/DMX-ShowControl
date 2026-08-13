@@ -1,0 +1,420 @@
+{
+    "type": "fades",
+    "version": 1,
+    "data": [
+        {
+            "id": 1,
+            "name": "Fade out 2s",
+            "duration": 2000,
+            "mode": "exclusive",
+            "devices": [
+                {
+                    "device": 1,
+                    "channels": [
+                        {
+                            "channel": 1,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 2,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 3,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 4,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 5,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 0
+                        },
+                        {
+                            "channel": 6,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 7,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 8,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 255
+                        },
+                        {
+                            "channel": 9,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 10,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 11,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 12,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 13,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 14,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 15,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        }
+                    ]
+                },
+                {
+                    "device": 2,
+                    "channels": [
+                        {
+                            "channel": 1,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 2,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 3,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 4,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 0
+                        },
+                        {
+                            "channel": 5,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "name": "Gelb 2s",
+            "duration": 2000,
+            "mode": "overwrite",
+            "devices": [
+                {
+                    "device": 1,
+                    "channels": [
+                        {
+                            "channel": 1,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 2,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 3,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 4,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 5,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 0
+                        },
+                        {
+                            "channel": 6,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 0
+                        },
+                        {
+                            "channel": 7,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 0
+                        },
+                        {
+                            "channel": 8,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 9,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 10,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 11,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 12,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 13,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 14,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 15,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        }
+                    ]
+                },
+                {
+                    "device": 2,
+                    "channels": [
+                        {
+                            "channel": 1,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 0
+                        },
+                        {
+                            "channel": 2,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 0
+                        },
+                        {
+                            "channel": 3,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 4,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 0
+                        },
+                        {
+                            "channel": 5,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 3,
+            "name": "Stranded 2",
+            "duration": 5500,
+            "mode": "overwrite",
+            "devices": [
+                {
+                    "device": 1,
+                    "channels": [
+                        {
+                            "channel": 1,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 2,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 3,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 4,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 5,
+                            "enabled": true,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 6,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 7,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 8,
+                            "enabled": false,
+                            "start": 255,
+                            "end": 255
+                        },
+                        {
+                            "channel": 9,
+                            "enabled": false,
+                            "start": 100,
+                            "end": 100
+                        },
+                        {
+                            "channel": 10,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 11,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 12,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 13,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 14,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 15,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        }
+                    ]
+                },
+                {
+                    "device": 2,
+                    "channels": [
+                        {
+                            "channel": 1,
+                            "enabled": false,
+                            "start": 50,
+                            "end": 50
+                        },
+                        {
+                            "channel": 2,
+                            "enabled": false,
+                            "start": 50,
+                            "end": 50
+                        },
+                        {
+                            "channel": 3,
+                            "enabled": false,
+                            "start": 255,
+                            "end": 255
+                        },
+                        {
+                            "channel": 4,
+                            "enabled": true,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 5,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

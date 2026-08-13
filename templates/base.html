@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet"
+href="{{ url_for('static', filename='css/style.css') }}">
+
+<link rel="icon"
+href="{{ url_for('static', filename='favicon.png') }}">
+
+<title>
+DMX-ShowControl
+</title>
+
+</head>
+
+
+<body>
+
+
+<nav class="navbar">
+
+<div class="menu-button"
+onclick="toggleMenu()">
+
+☰
+
+</div>
+
+<div class="logo">
+
+<a href="/">
+<img src="{{ url_for('static', filename='logo.png') }}">
+
+</a>
+
+</div>
+
+
+
+
+<div class="nav-links"
+id="mobileMenu">
+
+<a href="/" 
+{% if request.path == "/" %}
+class="active"
+{% endif %}>
+Dashboard
+{% if problems %}
+<span style="color: #d97706;">
+    <b>⚠{{ problems|length }}</b>
+</span>
+{% endif %}
+</a>
+
+<a href="/triggers"
+{% if request.path == "/triggers" %}
+class="active"
+{% endif %}>
+Triggers
+</a>
+
+<a href="/sequences"
+{% if request.path == "/sequences" %}
+class="active"
+{% endif %}>
+Sequences
+</a>
+
+<a href="/fades"
+{% if request.path == "/fades" %}
+class="active"
+{% endif %}>
+Fades
+</a>
+
+<a href="/strobes"
+{% if request.path == "/strobes" %}
+class="active"
+{% endif %}>
+Strobes
+</a>
+
+<a href="/scenes"
+{% if request.path == "/scenes" %}
+class="active"
+{% endif %}>
+Scenes
+</a>
+
+<a href="/devices"
+{% if request.path == "/devices" %}
+class="active"
+{% endif %}>
+Devices
+</a>
+
+<a href="/timing"
+{% if request.path == "/timing" %}
+class="active"
+{% endif %}>
+Timing
+</a>
+
+<a href="/settings"
+{% if request.path == "/settings" %}
+class="active"
+{% endif %}>
+Settings
+</a>
+
+</div>
+
+<div class="mode-tabs">
+
+<a href="#" onclick="clearDMX();return false;" style="background: #be0000;margin-right: 20px;">
+Clear DMX
+</a>
+
+
+<a href="/set-mode/show"
+{% if mode == "show" %}
+class="active"
+{% endif %}>
+Show-Mode
+
+</a>
+<a href="/set-mode/edit"
+{% if mode == "edit" %}
+class="active"
+{% endif %}>
+Edit-Mode
+</a>
+
+</div>
+
+</nav>
+
+
+
+<div class="page">
+
+{% block content %}
+{% endblock %}
+
+</div>
+
+
+
+<script>
+
+function toggleMenu(){
+
+document
+.getElementById("mobileMenu")
+.classList
+.toggle("active");
+
+}
+
+</script>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<script>
+
+const socket = io();
+
+
+socket.on(
+    "data_reload",
+    function(data){
+
+        console.log(
+            "Daten geändert:",
+            data.file
+        );
+
+        location.reload();
+
+    }
+);
+function clearDMX(){
+    fetch("/dmx/clear");
+}
+</script>
+
+</body>
+</html>
