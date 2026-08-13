@@ -139,7 +139,7 @@ ROADMAP
 
 - Finish English UI translation
 - Release standalone Windows .EXE
-- ADD MIDI integration
+- Add MIDI integration
 - Add MIDI Learn
 - Improve DMX fixture support
 - Improve the song/show workflow
