@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.jpg" alt="DMX-ShowControl Logo" width="300">
+</p>
+
 # DMX-ShowControl
 
 **Open-source show control software for live music and DMX lighting.**
