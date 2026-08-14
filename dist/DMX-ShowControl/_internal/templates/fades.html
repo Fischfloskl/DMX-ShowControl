@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>
+Fades
+</h1>
+
+
+
+<div class="card">
+
+<div class="scene-actions">
+
+<button
+class="btn-primary"
+onclick="window.location.href='/fades/add'">
+
++ new Fade
+
+</button>
+
+</div>
+
+</div>
+
+
+
+
+<div class="card">
+
+<h2>
+Saved Fades
+</h2>
+
+<div class="tablewrapper">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>
+Name
+</th>
+
+<th>
+Channels
+</th>
+
+<th>
+Duration
+</th>
+
+<th>
+Actions
+</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for fade in fades %}
+
+<tr>
+
+<td>
+
+{{ fade.name }}
+
+</td>
+
+<td>
+
+{{ fade.targets|length }}
+
+</td>
+
+<td>
+
+{{ fade.duration }} ms
+
+</td>
+
+<td>
+
+<div class="scene-actions">
+
+<button
+class="btn-success"
+onclick="startFade({{ fade.id }})">
+
+Start
+
+</button>
+
+
+<button
+class="btna"
+style="background:#292929;"
+onclick="window.location.href='/fades/edit?id={{ fade.id }}'">
+
+Edit
+
+</button>
+
+<button
+    onclick="window.location.href='/fades/duplicate?id={{ fade.id }}'"
+    class="btn-secondary"
+    style="background:#292929;"
+>
+    Duplicate
+</button>
+
+
+<button
+class="btn-danger"
+onclick="deleteFade({{ fade.id }})">
+
+Delete
+
+</button>
+
+</div>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<script>
+
+function startFade(id){
+
+    fetch(
+        "/fades/start?id="+id
+    );
+
+}
+
+
+function deleteFade(id){
+
+    if(confirm(
+        "Do you really want to delete this fade?"
+    )){
+
+        window.location.href =
+        "/fades/delete?id="+id;
+
+    }
+
+}
+
+</script>
+
+{% endblock %}

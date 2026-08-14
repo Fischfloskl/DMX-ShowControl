@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<body>
+<div class="card">
+
+    <h3>Timing</h3>
+
+    <div class="mode-selector">
+
+<form method="post" action="/settings/save-timing">
+<label class="mode-option">
+
+<input
+type="radio"
+name="timing-mode"
+value="live"
+onchange="this.form.submit();"
+{% if timing_mode == "live" %}
+checked
+{% endif %}
+>
+
+<div class="mode-card">
+
+<strong>
+Live Timing
+</strong>
+
+<span>
+Control the timer via the web interface
+</span>
+
+</div>
+
+</label>
+
+<br>
+<br>
+
+<label class="mode-option">
+
+<input
+type="radio"
+onchange="this.form.submit();"
+name="timing-mode"
+value="global"
+{% if timing_mode == "global" %}
+checked
+{% endif %}
+onclick=""
+>
+
+<div class="mode-card">
+
+<strong>
+Global Trigger
+</strong>
+
+<span>
+Timing is triggered by a system-wide hotkey
+</span>
+
+</div>
+
+</label>
+
+</div>
+
+</form>
+
+
+<br>
+<br>
+<br>
+
+<script>
+    const timingMode = {{ timing_mode | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/timing.js') }}"></script>
+<script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+</body>
+
+{% if timing_mode == "live" %}
+{% include 'live-timing.html' %}
+{% endif %}
+
+{% if timing_mode == "global" %}
+{% include 'global-timing.html' %}
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<h1>
+{{ device.name }}
+</h1>
+
+
+<div class="card">
+
+<h3>
+Edit Channels
+</h3>
+
+
+<form action="/scenes/device/save" method="post">
+
+
+<input
+type="hidden"
+name="scene"
+value="{{ scene.id }}">
+
+
+<input
+type="hidden"
+name="device"
+value="{{ device.id }}">
+
+
+
+<div class="channel-grid">
+
+
+
+{% for c in range(device.channels) %}
+
+
+{% set value = values.get((c+1)|string,0) %}
+
+
+
+<div class="channel-card {% if value > 0 %}active{% endif %}">
+
+
+<div class="channel-header">
+
+
+<span>
+
+{{ device.channel_names[c] }}
+
+</span>
+
+
+<span
+class="channel-value">
+
+{% if value > 0 %}
+{{ value }}
+{% endif %}
+
+</span>
+
+
+</div>
+
+
+<div style="font-size:12px;color:#999">
+
+DMX {{ device.start_channel+c }}
+
+</div>
+
+
+
+<input
+
+type="range"
+
+min="0"
+
+max="255"
+
+value="{{ value }}"
+
+name="ch_{{ c+1 }}"
+
+oninput="updateSlider(this)"
+
+>
+
+
+</div>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+
+
+<br>
+
+
+<button
+class="btn-success"
+type="submit">
+
+Save
+
+</button>
+
+
+<button
+type="button"
+class="btna"
+onclick="history.back()">
+
+Cancel
+
+</button>
+
+
+</form>
+
+
+</div>
+
+
+
+
+<script>
+
+function updateSlider(slider){
+
+let card =
+slider.closest(".channel-card");
+
+
+let value =
+card.querySelector(".channel-value");
+
+
+
+if(slider.value == 0){
+
+value.innerHTML="";
+card.classList.remove("active");
+
+}
+
+else{
+
+value.innerHTML=slider.value;
+card.classList.add("active");
+
+}
+
+}
+
+</script>
+
+
+
+{% endblock %}

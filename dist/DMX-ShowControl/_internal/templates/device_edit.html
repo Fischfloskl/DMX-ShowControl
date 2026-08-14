@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<h1>
+Edit device
+</h1>
+
+
+
+<div class="card">
+
+<h3>
+{{ device.name }}
+</h3>
+
+
+<form action="/devices/edit/save" method="post">
+
+
+<input
+type="hidden"
+name="id"
+value="{{ device.id }}">
+
+
+
+<div class="form-grid">
+
+
+<div>
+
+<label>
+Name
+</label>
+
+<input
+class="btna"
+name="name"
+value="{{ device.name }}"
+required>
+
+</div>
+
+
+
+<div>
+
+<label>
+Startadress
+</label>
+
+<input
+class="btna"
+type="number"
+name="start_channel"
+value="{{ device.start_channel }}"
+required>
+
+</div>
+
+
+
+<div>
+
+<label>
+Channels
+</label>
+
+<input
+class="btna"
+type="number"
+name="channels"
+value="{{ device.channels }}"
+required>
+
+</div>
+
+
+
+<div>
+
+<label>
+Color
+</label>
+
+<input
+class="btna"
+name="color"
+type="color"
+style="height:50px;"
+value="{{ device.color }}">
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="card">
+
+
+<h3>
+Channelname
+</h3>
+
+
+<p style="color:#999;">
+
+These names will be displayed later in the Scene Editor.
+The DMX address is automatically calculated based on the start address.
+
+</p>
+
+
+
+<div class="form-grid">
+
+
+{% for c in range(device.channels) %}
+
+
+<div>
+
+
+<label>
+DMX {{ device.start_channel + c }}
+</label>
+
+
+<input
+class="btna"
+name="channel_{{ c+1 }}"
+value="{{ device.channel_names[c] if c < device.channel_names|length else 'CH' ~ (c+1) }}">
+
+
+</div>
+
+
+{% endfor %}
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="card">
+
+
+<div class="scene-actions">
+
+
+<button
+class="btn-success"
+type="submit">
+
+Save
+
+</button>
+
+
+<button
+type="button"
+class="btna"
+onclick="window.location.href='/devices'">
+
+Cancel
+
+</button>
+
+<button
+class="btn-danger"
+type="button"
+style="text-decoration:none;"
+onclick="deleteDevice('{{ device.id }}')">
+
+Delete
+
+</button>
+
+<script>
+
+function deleteDevice(id){
+
+    if(confirm("Do you really want to delete this device?")){
+
+        window.location.href =
+            "/devices/delete?id=" + id;
+
+    }
+
+}
+
+</script>
+
+</div>
+
+
+</div>
+
+
+
+</form>
+
+
+
+{% endblock %}

@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<h1>
+Dashboard
+</h1>
+
+
+<div class="card">
+
+<h3>
+Status
+</h3>
+
+
+<p>
+Console:
+
+<span id="connection-status" class="status-offline">
+Offline
+</span>
+
+</p>
+
+
+<button 
+class="btn-primary"
+onclick="reconnect()"
+id="reconnect-button">
+
+Reconnect
+
+</button>
+
+<br>
+<br>
+<br>
+
+{% if problems %}
+
+<div class="card warning-card">
+
+<h2>
+⚠ Config-problems
+</h2>
+
+
+{% for p in problems %}
+
+<div class="problem">
+
+<strong>
+{{ p.title }}
+</strong>
+
+<br>
+
+{{ p.message }}
+<br>
+<br>
+<br>
+</div>
+
+
+{% endfor %}
+
+
+</div>
+
+
+{% else %}
+
+
+<div class="card success-card">
+
+<h2>
+✓ System OK
+</h2>
+
+No Issues found.
+
+</div>
+
+
+{% endif %}
+</div>
+<div class="card">
+
+<h3>
+Network
+</h3>
+
+
+<p>
+Webinterface:
+</p>
+
+
+<h2>
+{% if network_mode == "lan" %}
+
+http://{{ ip }}:{{ port }}
+
+{% endif %}
+</h2>
+
+<h2>
+{% if network_mode == "local" %}
+
+localhost:{{ port }} (Only this device)
+
+{% endif %}
+</h2>
+
+{% if network_mode == "lan" and create_qr %}<img 
+
+src="/static/network_qr.png"
+width="200" class="qr_code">
+
+{% endif %}
+
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+
+<script>
+
+const socket = io();
+
+
+socket.on(
+    "status_update",
+    function(data){
+
+        let status =
+            document.getElementById(
+                "connection-status"
+            );
+
+
+        if(data.connected){
+
+            status.innerHTML = "Online";
+
+            status.className =
+                "status-online";
+
+        }
+        else{
+
+            status.innerHTML = "Offline";
+
+            status.className =
+                "status-offline";
+
+        }
+
+        let button =
+            document.getElementById(
+                "reconnect-button"
+            );
+
+
+        if(data.connected){
+
+            button.style.display = "none";
+
+        }
+        else{
+
+            button.style.display = "block";
+
+        }
+
+    }
+);
+
+
+
+function reconnect(){
+
+    if(!confirm("Reconnect DMX-console? ~5 sec."))
+        return;
+
+
+    fetch(
+        "/api/reconnect",
+        {
+            method:"POST"
+        }
+    );
+
+}
+
+</script>
+
+
+{% endblock %}

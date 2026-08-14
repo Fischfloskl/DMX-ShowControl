@@ -1,0 +1,1023 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+
+<h1>
+Edit sequence
+</h1>
+
+
+
+
+<form action="/sequences/save" method="post">
+
+
+
+<div class="card">
+
+
+<div class="scene-actions">
+
+
+<button
+class="btn-success"
+type="submit">
+
+Save
+
+</button>
+
+
+
+<button
+type="button"
+class="btna"
+onclick="history.back()">
+
+Cancel
+
+</button>
+
+<button
+type="button"
+class="btn-danger"
+onclick="deleteSequence()">
+
+Delete
+
+</button>
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<div class="card">
+
+
+<h2>
+General
+</h2>
+
+
+
+<input
+type="hidden"
+name="id"
+value="{{ sequence.id }}">
+
+
+
+<label>
+Name
+</label>
+
+
+<input
+class="text-input btna"
+type="text"
+name="name"
+value="{{ sequence.name }}"
+required>
+
+
+
+</div>
+
+
+
+
+
+
+
+
+<div class="card">
+
+
+<h2>
+Steps
+</h2>
+
+
+
+
+<div id="steps">
+
+
+
+{% for step in sequence.steps %}
+
+
+
+<div class="action-card">
+
+
+
+<label>
+Duration until the next step
+</label>
+
+
+<input
+class="btna step-time"
+type="number"
+name="step_time"
+value="{{ (step.time / 1000)|round(2) }}"
+step="0.001">
+    
+<br>
+<br>
+
+<select
+class="btna time-unit"
+name="step_unit">
+
+
+<option value="ms">
+ms
+</option>
+
+
+<option value="sec"
+selected>
+Seconds
+</option>
+
+
+<option value="min">
+Minutes
+</option>
+
+
+</select>
+
+
+
+<br>
+<br>
+
+
+
+<label>
+Actions
+</label>
+
+
+
+<select
+class="btna"
+name="step_type"
+onchange="updateStep(this)">
+
+
+
+<option value="scene"
+{% if step.action=="scene" %}
+selected
+{% endif %}
+>
+Scene
+</option>
+
+<option value="fade"
+{% if step.action=="fade" %}
+selected
+{% endif %}>
+Fade
+</option>
+
+<option value="strobe"
+{% if step.action=="strobe" %}
+selected
+{% endif %}>
+Strobe
+</option>
+
+<option value="keyboard"
+{% if step.action=="keyboard" %}
+selected
+{% endif %}
+>
+Keyboard
+</option>
+
+
+
+</select>
+
+
+
+
+<br>
+<br>
+
+
+
+<div class="target-box">
+
+
+
+<input
+class="text-input btna"
+name="step_target"
+value="{{ step.target|default('') }}"
+placeholder="Target">
+
+
+
+<br>
+<br>
+
+
+<div class="suggestions">
+
+
+
+{% for scene in scenes %}
+
+
+<button
+type="button"
+class="btna"
+onclick="setTarget(this)">
+
+{{ scene.name }}
+
+</button>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+<div class="keyboard-action"
+{% if step.action!="keyboard" %}
+style="display:none"
+{% endif %}
+>
+
+
+
+<input
+type="hidden"
+name="step_keys"
+value="{{ step.get('keys',[])|join(',') }}">
+
+
+
+<button
+type="button"
+class="btn-primary"
+onclick="recordKeys(this)">
+
+Record Hotkey
+
+</button>
+
+
+
+<span class="key-box">
+
+{{ step.get('keys',[])|join(" + ") }}
+
+</span>
+
+
+</div>
+
+
+
+
+<br>
+<br>
+
+
+
+<button
+type="button"
+class="btn-danger"
+onclick="this.parentElement.remove()">
+
+Remove step
+
+</button>
+<hr class="action-divider">
+<br>
+<br>
+
+
+
+</div>
+
+
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+
+
+
+<br>
+
+
+
+<button
+type="button"
+class="btn-primary"
+onclick="addStep()">
+
++ Add step
+
+</button>
+
+
+
+</div>
+
+
+
+
+
+
+
+<div class="card">
+
+
+<div class="scene-actions">
+
+
+<button
+class="btn-success"
+type="submit">
+
+Save
+
+</button>
+
+
+
+<button
+type="button"
+class="btna"
+onclick="history.back()">
+
+Cancel
+
+</button>
+
+<button
+type="button"
+class="btn-danger"
+onclick="deleteSequence()">
+
+Delete
+
+</button>
+
+</div>
+
+
+</div>
+
+
+
+
+
+</form>
+
+
+
+
+
+
+
+
+
+<script>
+
+
+
+function setTarget(button){
+
+
+let input =
+button.closest(".target-box")
+.querySelector("input");
+
+
+input.value =
+button.innerText;
+
+
+}
+
+
+
+
+
+
+function updateStep(select){
+
+
+let card =
+select.closest(".action-card");
+
+
+let keyboard =
+card.querySelector(
+".keyboard-action"
+);
+
+
+let target =
+card.querySelector(
+".target-box"
+);
+
+
+
+if(select.value=="keyboard"){
+
+
+keyboard.style.display="block";
+
+target.style.display="none";
+
+
+}
+else{
+
+
+keyboard.style.display="none";
+
+target.style.display="block";
+
+
+}
+
+
+}
+
+
+
+
+
+</script>
+
+<script>
+
+
+function setTarget(button){
+
+
+    let input =
+    button.closest(".target-box")
+    .querySelector("input");
+
+
+    input.value =
+    button.innerText;
+
+
+}
+
+
+
+
+function updateStep(select){
+
+
+    let card =
+    select.closest(".action-card");
+
+
+    let keyboard =
+    card.querySelector(
+        ".keyboard-action"
+    );
+
+
+    let target =
+    card.querySelector(
+        ".target-box"
+    );
+
+
+    if(select.value=="keyboard"){
+
+
+        keyboard.style.display="block";
+
+        target.style.display="none";
+
+
+    }
+    else{
+
+
+        keyboard.style.display="none";
+
+        target.style.display="block";
+
+
+        updateSuggestions(card, select.value);
+
+
+    }
+
+
+}
+
+
+
+
+
+function updateSuggestions(card, type){
+
+
+    let suggestions =
+    card.querySelector(
+        ".suggestions"
+    );
+
+
+    if(!suggestions)
+        return;
+
+
+
+    if(type=="scene"){
+
+
+        suggestions.innerHTML = `
+
+
+        {% for scene in scenes %}
+
+
+        <button
+        type="button"
+        class="btna"
+        onclick="setTarget(this)">
+
+        {{scene.name}}
+
+        </button>
+
+
+        {% endfor %}
+
+
+        `;
+
+
+    }
+
+
+
+    else if(type=="fade"){
+
+
+        suggestions.innerHTML = `
+
+
+        {% for fade in fades %}
+
+
+        <button
+        type="button"
+        class="btna"
+        onclick="setTarget(this)">
+
+        {{fade.name}}
+
+        </button>
+
+
+        {% endfor %}
+
+
+        `;
+
+
+    }
+
+    else if(type=="strobe"){
+
+        suggestions.innerHTML = `
+
+        {% for strobe in strobes %}
+
+        <button
+        type="button"
+        class="btna"
+        onclick="setTarget(this)">
+
+        {{strobe.name}}
+
+        </button>
+
+        {% endfor %}
+
+        `;
+    }
+
+}
+
+
+
+
+
+
+function addStep(){
+
+
+    let container =
+    document.getElementById(
+        "steps"
+    );
+
+
+
+    let div =
+    document.createElement(
+        "div"
+    );
+
+
+
+    div.className =
+    "action-card";
+
+
+
+    div.innerHTML = `
+
+
+<label>
+Dauer bis nächster Schritt
+</label>
+
+
+<input
+class="btna step-time"
+type="number"
+name="step_time"
+value="1"
+step="0.01">
+
+
+<br><br>
+
+
+<select
+class="btna time-unit"
+name="step_unit">
+
+
+<option value="ms">
+ms
+</option>
+
+
+<option value="sec" selected>
+Sekunden
+</option>
+
+
+<option value="min">
+Minuten
+</option>
+
+
+</select>
+
+
+<br><br>
+
+
+
+<label>
+Aktion
+</label>
+
+
+<select
+class="btna"
+name="step_type"
+onchange="updateStep(this)">
+
+
+<option value="scene">
+Szene
+</option>
+
+
+<option value="fade">
+Fade
+</option>
+
+<option value="strobe">
+Strobe
+</option>
+
+<option value="keyboard">
+Keyboard
+</option>
+
+
+</select>
+
+
+
+<br><br>
+
+
+
+<div class="target-box">
+
+
+<input
+class="text-input btna"
+name="step_target"
+placeholder="Target">
+
+
+<br><br>
+
+
+<div class="suggestions">
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="keyboard-action"
+style="display:none">
+
+
+<input
+type="hidden"
+name="step_keys">
+
+
+<button
+type="button"
+class="btn-primary"
+onclick="recordKeys(this)">
+
+Tasten aufnehmen
+
+</button>
+
+
+
+<span class="key-box">
+
+</span>
+
+
+</div>
+
+
+
+<br><br>
+
+
+
+<button
+type="button"
+class="btn-danger"
+onclick="this.parentElement.remove()">
+
+Schritt entfernen
+
+</button>
+
+
+<hr class="action-divider">
+
+
+`;
+
+
+
+    container.appendChild(
+        div
+    );
+
+
+
+    updateSuggestions(
+        div,
+        "scene"
+    );
+
+
+
+}
+
+
+
+
+
+
+
+document.addEventListener(
+"DOMContentLoaded",
+function(){
+
+
+document
+.querySelectorAll(
+"select[name='step_type']"
+)
+.forEach(
+function(select){
+
+
+updateStep(
+select
+);
+
+
+});
+
+
+
+});
+
+
+
+</script>
+<script>
+
+
+function recordKeys(button){
+
+
+let keys=[];
+
+
+let box =
+button.parentElement.querySelector(
+".key-box"
+);
+
+
+let input =
+button.parentElement.querySelector(
+"input[type=hidden]"
+);
+
+
+
+box.innerHTML =
+"Drücke Tasten...";
+
+
+
+window.onkeydown=function(e){
+
+
+e.preventDefault();
+
+
+let key =
+e.key.toLowerCase();
+
+
+
+if(!keys.includes(key)){
+
+
+keys.push(key);
+
+
+}
+
+
+
+box.innerHTML =
+keys.join(" + ");
+
+
+
+input.value =
+keys.join(",");
+
+
+
+};
+
+
+
+window.onkeyup=function(){
+
+
+window.onkeydown=null;
+
+
+};
+
+
+
+}
+
+document.querySelector("form")
+.addEventListener(
+"submit",
+function(){
+
+
+document
+.querySelectorAll(".action-card")
+.forEach(card=>{
+
+
+let input =
+card.querySelector(".step-time");
+
+
+let unit =
+card.querySelector(".time-unit");
+
+
+let value =
+parseFloat(input.value);
+
+
+
+if(unit.value=="sec"){
+
+    value *= 1000;
+
+}
+
+
+if(unit.value=="min"){
+
+    value *= 60000;
+
+}
+
+
+input.value =
+Math.round(value);
+
+
+
+});
+
+
+});
+function deleteSequence(){
+
+
+if(confirm(
+"Sequenz wirklich löschen?"
+)){
+
+
+window.location.href =
+"/sequences/delete?id="+{{ sequence.id }};
+
+
+}
+
+
+}
+</script>
+
+
+
+
+{% endblock %}

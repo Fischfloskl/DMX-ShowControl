@@ -1,0 +1,1058 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+
+<h1>
+Edit Trigger
+</h1>
+
+
+
+
+<form action="/triggers/save" method="post">
+
+<div class="card">
+
+
+<div class="scene-actions">
+
+
+
+<button
+class="btn-success"
+type="submit">
+
+Save
+
+</button>
+
+
+
+
+<button
+type="button"
+class="btna"
+onclick="history.back()">
+
+Cancel
+
+</button>
+
+
+</div>
+
+
+</div>
+
+<div class="card">
+
+
+<h2>
+General
+</h2>
+
+
+<input
+type="hidden"
+name="id"
+value="{{ trigger.id }}">
+
+
+
+<label>
+Name
+</label>
+
+
+<input
+class="text-input, btna"
+type="text"
+name="name"
+value="{{ trigger.name }}"
+required>
+
+
+
+<br><br>
+
+
+
+<label>
+Active
+
+</label>
+
+
+<input
+type="checkbox"
+name="enabled"
+class="checkbox"
+{% if trigger.enabled %}
+checked
+{% endif %}
+
+>
+
+
+
+<br><br>
+
+
+
+<label>
+Type
+</label>
+
+
+<select
+name="type"
+id="trigger_type"
+class="btna"
+onchange="updateType()">
+
+
+<option value="keyboard"
+
+{% if trigger.type == "keyboard" %}
+selected
+{% endif %}
+
+>
+Keyboard
+</option>
+
+
+<option value="midi"
+
+{% if trigger.type == "midi" %}
+selected
+{% endif %}
+
+>
+MIDI
+</option>
+
+
+</select>
+
+
+
+</div>
+
+
+
+
+
+
+<div class="card" id="keyboard_box">
+
+
+<h2>
+Hotkeys
+</h2>
+
+
+
+<input
+type="hidden"
+name="keys"
+id="keys_input"
+value="{{ trigger['keys']|join(',') }}"
+>
+
+
+
+<div
+id="key_display"
+class="key-box">
+
+
+{% if trigger['keys'] %}
+
+
+{% for key in trigger['keys'] %}
+
+{{ key }}
+
+{% if not loop.last %}
++
+{% endif %}
+
+
+{% endfor %}
+
+
+{% else %}
+
+Keine Taste
+
+
+{% endif %}
+
+
+</div>
+
+
+
+
+<button
+type="button"
+class="btn-primary"
+onclick="recordKeys()">
+
+Record Hotkeys
+
+</button>
+
+
+
+<p
+style="color:#999;">
+
+Then press, for example,
+CTRL + SHIFT + B
+
+</p>
+
+
+
+</div>
+
+
+
+
+<div class="card" id="midi_box">
+
+
+<h2>
+MIDI
+</h2>
+
+
+<label>
+Note / CC
+</label>
+
+
+<input
+class="text-input btna"
+type="number"
+name="midi_input"
+value="{{ trigger.get('input','') }}"
+placeholder="e.g. 60">
+
+
+<p style="color:#999;">
+
+Temporary: MIDI Note Number
+
+</p>
+
+
+</div>
+
+
+<div class="card">
+
+<h2>
+Actions
+</h2>
+
+
+<div id="actions">
+
+
+{% for action in trigger.actions %}
+
+
+<div class="action-card">
+
+
+<select
+name="action_type"
+class="btna action-type"
+onchange="updateAction(this)">
+
+
+<option value="scene"
+{% if action.type=="scene" %}selected{% endif %}>
+Scene
+</option>
+
+<option value="fade"
+{% if action.type=="fade" %}selected{% endif %}>
+Fade
+</option>
+
+<option value="strobe"
+{% if action.type=="strobe" %}selected{% endif %}>
+Strobe
+</option>
+
+<option value="sequence"
+{% if action.type=="sequence" %}selected{% endif %}>
+Sequence
+</option>
+
+
+<option value="keyboard"
+{% if action.type=="keyboard" %}selected{% endif %}>
+Keyboard
+</option>
+
+
+</select>
+
+<br>
+<br>
+
+<div class="target-box">
+
+<input
+class="text-input btna"
+name="action_target"
+value="{{ action.get('target','') }}"
+placeholder="Target">
+
+
+<div class="suggestions scene-suggestions">
+<br>
+<br>
+
+{% for scene in scenes %}
+
+<button
+type="button"
+class="btna"
+onclick="setTarget(this)">
+
+{{ scene.name }}
+
+</button>
+
+{% endfor %}
+
+
+</div>
+
+<br>
+<br>
+
+<div class="suggestions sequence-suggestions">
+
+
+{% for seq in sequences %}
+
+<button
+type="button"
+class="btna"
+onclick="setTarget(this)">
+
+{{ seq.name }}
+
+</button>
+
+{% endfor %}
+<br>
+<br>
+
+</div>
+
+<div class="suggestions fade-suggestions">
+<br>
+<br>
+
+{% for fade in fades %}
+
+<button
+type="button"
+class="btna"
+onclick="setTarget(this)">
+
+{{ fade.name }}
+
+</button>
+
+{% endfor %}
+
+</div>
+
+<div class="suggestions strobe-suggestions">
+<br>
+<br>
+
+{% for strobe in strobes %}
+
+<button
+type="button"
+class="btna"
+onclick="setTarget(this)">
+
+{{ strobe.name }}
+
+</button>
+
+{% endfor %}
+
+</div>
+
+</div>
+
+<div class="keyboard-action"
+{% if action.type!="keyboard" %}
+style="display:none"
+{% endif %}
+>
+
+
+<input
+type="hidden"
+name="action_keys"
+value="{{ action.get('keys', [])|join(',') }}">
+
+<br>
+<br>
+
+<button
+type="button"
+class="btn-primary"
+onclick="recordActionKeys(this)">
+Record Hotkeys
+</button>
+
+<br>
+<br>
+
+<span class="key-box">
+{{ action.get('keys', [])|join(" + ") }}
+</span>
+
+
+</div>
+
+<br>
+<br>
+
+
+<button
+type="button"
+class="btn-danger"
+onclick="this.parentElement.remove()">
+
+Remove
+
+</button>
+<hr class="action-divider">
+<br>
+<br>
+
+</div>
+
+
+{% endfor %}
+
+
+</div>
+
+
+
+<br>
+<br>
+
+<button
+type="button"
+class="btn-primary"
+onclick="addAction()">
+
++ Add action
+
+</button>
+
+
+</div>
+
+
+
+
+
+
+
+<div class="card">
+
+
+<div class="scene-actions">
+
+
+
+<button
+class="btn-success"
+type="submit">
+
+Save
+
+</button>
+
+
+
+
+<button
+type="button"
+class="btna"
+onclick="history.back()">
+
+Cancel
+
+</button>
+
+
+</div>
+
+
+</div>
+
+
+
+
+</form>
+
+
+
+
+
+
+
+
+<script>
+const scenes = [
+    {% for scene in scenes %}
+        "{{ scene.name }}",
+    {% endfor %}
+];
+const sequences = [
+    {% for seq in sequences %}
+        "{{ seq.name }}",
+    {% endfor %}
+];
+const fades = [
+    {% for fade in fades %}
+        "{{ fade.name }}",
+    {% endfor %}
+];
+const strobes = [
+    {% for strobe in strobes %}
+        "{{ strobe.name }}",
+    {% endfor %}
+];
+
+
+let pressedKeys = [];
+
+
+
+function recordKeys(){
+
+
+    pressedKeys = [];
+
+
+    document.getElementById(
+        "key_display"
+    ).innerHTML =
+    "Press Hotkeys...";
+
+
+    window.onkeydown = function(e){
+
+
+        e.preventDefault();
+
+
+
+        let key =
+        e.key.toLowerCase();
+
+
+
+        if(!pressedKeys.includes(key)){
+
+
+            pressedKeys.push(key);
+
+
+        }
+
+
+
+        document.getElementById(
+            "key_display"
+        ).innerHTML =
+        pressedKeys.join(" + ");
+
+
+
+        document.getElementById(
+            "keys_input"
+        ).value =
+        pressedKeys.join(",");
+
+
+
+    };
+
+
+
+    window.onkeyup = function(){
+
+
+        window.onkeydown = null;
+
+
+    };
+
+
+}
+
+
+
+
+
+
+
+function addAction(){
+
+
+let div=document.createElement("div");
+
+
+div.className="action-card";
+
+
+div.innerHTML=`
+<br>
+<br>
+<select 
+name="action_type"
+class="btna action-type"
+onchange="updateAction(this)">
+
+
+<option value="scene">
+Scene
+</option>
+
+<option value="fade">
+Fade
+</option>
+
+<option value="strobe">
+Strobe
+</option>
+
+<option value="sequence">
+Sequence
+</option>
+
+
+<option value="keyboard">
+Keyboard
+</option>
+
+
+</select>
+
+<br>
+<br>
+
+<div class="target-box">
+
+<input
+class="text-input btna"
+name="action_target"
+placeholder="Target">
+
+
+<div class="suggestions scene-suggestions">
+<br>
+</div>
+
+<div class="suggestions sequence-suggestions">
+<br>
+</div>
+
+<div class="suggestions fade-suggestions">
+<br>
+</div>
+
+<div class="suggestions strobe-suggestions">
+<br>
+</div>
+
+</div>
+
+
+
+
+<div class="keyboard-action"
+style="display:none">
+
+
+<input
+type="hidden"
+name="action_keys"
+value=""
+>
+<br>
+<br>
+
+<button
+type="button"
+class="btn-primary"
+onclick="recordActionKeys(this)">
+
+Record Hotkeys
+
+</button>
+
+
+<span class="key-box"></span>
+
+
+</div>
+
+
+<br>
+<br>
+
+<button
+
+type="button"
+
+class="btn-danger"
+
+onclick="this.parentElement.remove()">
+
+Remove
+
+</button>
+<hr class="action-divider">
+
+<br>
+<br>
+`;
+
+
+document
+.getElementById("actions")
+.appendChild(div);
+
+updateAction(
+    div.querySelector(".action-type")
+);
+
+}
+
+
+
+
+
+
+function updateType(){
+
+
+let type =
+document.getElementById(
+"trigger_type"
+).value;
+
+
+
+let keyboard =
+document.getElementById(
+"keyboard_box"
+);
+
+
+let midi =
+document.getElementById(
+"midi_box"
+);
+
+
+
+keyboard.style.display="none";
+midi.style.display="none";
+
+
+
+if(type=="keyboard"){
+
+    keyboard.style.display="block";
+
+}
+
+
+if(type=="midi"){
+
+    midi.style.display="block";
+
+}
+
+
+}
+
+
+
+updateType();
+
+function recordActionKeys(button){
+
+
+let keys=[];
+
+
+let box =
+button.parentElement.querySelector(
+".key-box"
+);
+
+
+let input =
+button.parentElement.querySelector(
+"input[type=hidden]"
+);
+
+
+
+box.innerHTML="Press Hotkeys...";
+
+
+
+window.onkeydown=function(e){
+
+
+e.preventDefault();
+
+
+let key=e.key.toLowerCase();
+
+
+if(!keys.includes(key)){
+
+keys.push(key);
+
+}
+
+
+box.innerHTML=
+keys.join(" + ");
+
+
+input.value=
+keys.join(",");
+
+
+
+};
+
+
+
+window.onkeyup=function(){
+
+window.onkeydown=null;
+
+};
+
+
+
+}
+
+function setTarget(button){
+
+    let input =
+    button.closest(".target-box")
+    .querySelector("input");
+
+    input.value =
+    button.innerText;
+
+}
+
+
+
+function updateAction(select){
+
+
+let card =
+select.closest(".action-card");
+
+
+let keyboard =
+card.querySelector(
+".keyboard-action"
+);
+
+
+let target =
+card.querySelector(
+".target-box"
+);
+
+
+let scene =
+card.querySelector(
+".scene-suggestions"
+);
+
+let fade =
+card.querySelector(
+".fade-suggestions"
+);
+
+let strobe =
+card.querySelector(
+    ".strobe-suggestions"
+);
+
+let sequence =
+card.querySelector(
+".sequence-suggestions"
+);
+
+
+
+keyboard.style.display="none";
+target.style.display="none";
+scene.style.display="none";
+fade.style.display="none";
+strobe.style.display="none";
+sequence.style.display="none";
+
+
+
+if(select.value=="keyboard"){
+
+    keyboard.style.display="block";
+
+}
+
+
+
+if(select.value=="scene"){
+
+    target.style.display="block";
+
+    scene.style.display="block";
+
+    scene.innerHTML="<br>";
+
+    scenes.forEach(name => {
+
+        scene.innerHTML += `
+        <button
+        type="button"
+        class="btna"
+        onclick="setTarget(this)">
+        ${name}
+        </button>
+        `;
+
+    });
+
+}
+
+if(select.value=="fade"){
+
+
+    target.style.display="block";
+
+
+    fade.style.display="block";
+
+
+    fade.innerHTML="<br>";
+
+
+    fades.forEach(name => {
+
+
+        fade.innerHTML += `
+        <button
+        type="button"
+        class="btna"
+        onclick="setTarget(this)">
+        ${name}
+        </button>
+        `;
+
+
+    });
+
+
+}
+
+if(select.value=="strobe"){
+
+    target.style.display="block";
+
+    strobe.style.display="block";
+
+    strobe.innerHTML="<br>";
+
+    strobes.forEach(name => {
+
+        strobe.innerHTML += `
+
+        <button
+        type="button"
+        class="btna"
+        onclick="setTarget(this)">
+
+        ${name}
+
+        </button>
+
+        `;
+
+    });
+
+}
+
+if(select.value=="sequence"){
+
+    target.style.display="block";
+
+    sequence.style.display="block";
+
+    sequence.innerHTML="<br>";
+
+    sequences.forEach(name => {
+
+        sequence.innerHTML += `
+        <button
+        type="button"
+        class="btna"
+        onclick="setTarget(this)">
+        ${name}
+        </button>
+        `;
+
+    });
+
+}
+
+
+}
+document
+.querySelectorAll(".action-type")
+.forEach(
+    select => updateAction(select)
+);
+</script>
+
+
+
+
+{% endblock %}

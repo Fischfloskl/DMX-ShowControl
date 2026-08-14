@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+
+<h1>
+Edit Fade
+</h1>
+
+
+<form action="/fades/save" method="post">
+
+
+<div class="card">
+
+
+<input
+type="hidden"
+name="id"
+value="{{fade.id}}">
+
+
+<label>
+Name
+</label>
+
+<input
+class="text-input btna"
+type="text"
+name="name"
+value="{{fade.name}}"
+required>
+
+
+<br><br>
+
+
+<label>
+Duration
+</label>
+
+
+<div class="form-grid">
+
+
+<input
+class="btna"
+type="number"
+name="duration"
+value="{{fade.get('duration',1000)}}"
+min="1">
+
+
+<select
+class="btna"
+name="duration_unit">
+
+
+<option value="ms">
+ms
+</option>
+
+
+<option value="sec">
+Seconds
+</option>
+
+
+<option value="min">
+Minutes
+</option>
+
+
+</select>
+
+
+</div>
+
+
+<br>
+
+
+<button
+class="btn-success"
+type="submit">
+
+Save
+
+</button>
+
+
+<button
+class="btna"
+type="button"
+onclick="window.location.href='/fades'">
+
+Cancel
+
+</button>
+
+
+</div>
+
+
+</form>
+
+
+
+
+
+<div class="card">
+
+
+<h2>
+Devices
+</h2>
+
+
+
+<table class="data-table">
+
+
+<thead>
+
+<tr>
+
+<th>
+Device
+</th>
+
+<th>
+
+</th>
+
+<th>
+Start-channel
+</th>
+
+<th>
+Channels
+</th>
+
+<th>
+Action
+</th>
+
+</tr>
+
+</thead>
+
+
+
+<tbody>
+
+
+
+{% for fade_device in fade.get("devices",[]) %}
+
+
+
+{% for device in devices %}
+
+
+
+{% if device["id"]|int == fade_device.device|int %}
+
+
+
+<tr>
+
+
+<td>
+
+{{device.name}}
+
+</td>
+
+
+
+<td>
+
+
+<div
+style="
+width:22px;
+height:22px;
+border-radius:50%;
+background:{{device.color}};
+border:1px solid #555;
+">
+</div>
+
+
+</td>
+
+
+
+<td>
+
+{{device.start_channel}}
+
+</td>
+
+
+
+<td>
+
+{{device.channels}}
+
+</td>
+
+
+
+<td>
+
+
+<button
+class="btn-primary"
+type="button"
+style="background: #292929;"
+onclick="window.location.href='/fades/device?fade={{fade.id}}&device={{device.id}}'">
+
+Edit
+
+</button>
+
+
+</td>
+
+
+
+</tr>
+
+
+
+{% endif %}
+
+
+
+{% endfor %}
+
+
+
+{% endfor %}
+
+
+
+</tbody>
+
+
+</table>
+
+
+
+</div>
+
+<div class="card">
+
+<h2>
+Add device
+</h2>
+
+
+<form action="/fades/device/add" method="post">
+
+<input
+type="hidden"
+name="fade_id"
+value="{{fade.id}}">
+
+
+<select
+class="btna"
+name="device_id">
+
+
+{% for d in devices %}
+
+<option value="{{d.id}}">
+{{d.name}}
+</option>
+
+{% endfor %}
+
+
+</select>
+
+
+<button
+class="btn-primary"
+type="submit">
+
++ Add device
+
+</button>
+
+
+</form>
+
+</div>
+
+
+<div class="card">
+
+
+<h2>
+Actions
+</h2>
+
+
+<button
+class="btn-danger"
+type="button"
+onclick="deleteFade()">
+
+Delete Fade
+
+</button>
+
+
+</div>
+
+<script>
+function deleteFade(){
+
+    if(confirm(
+        "Do you really want to delete this fade?"
+    )){
+
+        window.location.href =
+        "/fades/delete?id={{fade.id}}";
+
+    }
+
+}
+</script>
+
+{% endblock %}

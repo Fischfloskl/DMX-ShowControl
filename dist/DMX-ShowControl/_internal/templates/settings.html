@@ -1,0 +1,529 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+
+<h1>
+Settings
+</h1>
+
+
+
+<!-- Einstellungen speichern -->
+
+<form method="post" action="/settings/save">
+
+
+
+<!-- Netzwerk -->
+
+<div class="card">
+
+<h3>
+🌐 Network
+</h3>
+
+
+<div class="form-grid">
+
+
+<div>
+
+<label>
+Acces
+</label>
+
+
+<select class="btna" name="network_mode">
+
+<option value="local"
+{% if network_mode == "local" %}selected{% endif %}>
+Only this device
+</option>
+
+
+<option value="lan"
+{% if network_mode == "lan" %}selected{% endif %}>
+Local network
+</option>
+
+
+</select>
+
+</div>
+
+
+
+<div>
+
+<label>
+Port
+</label>
+
+<input
+class="btna"
+type="number"
+name="port"
+value="{{ port }}">
+
+</div>
+
+
+
+<div>
+
+<label>
+Generate QR-Code
+</label>
+
+
+<select class="btna" name="create_qr">
+
+
+<option value="true"
+{% if create_qr %}selected{% endif %}>
+Yes
+</option>
+
+
+<option value="false"
+{% if not create_qr %}selected{% endif %}>
+No
+</option>
+
+
+</select>
+
+</div>
+
+
+</div>
+
+
+<p style="margin-top:15px;color:#999;">
+
+Changes to the network or port will not take effect until after a restart.
+
+</p>
+
+
+</div>
+
+
+
+
+
+<!-- Performance -->
+
+
+<div class="card">
+
+
+<h3>
+⚡ Performance
+</h3>
+
+
+
+<div class="form-grid">
+
+
+<div>
+
+
+<label>
+Fade-Refresh Rate (ms)
+</label>
+
+
+<input
+class="btna"
+type="number"
+min="20"
+max="1000"
+step="10"
+name="refresh_rate"
+value="{{ refresh_rate }}">
+
+
+</div>
+
+
+</div>
+
+
+<p style="margin-top:15px;color:#999;">
+
+Default: 50 ms.
+Lower values make fades smoother, but increase CPU usage.
+
+</p>
+
+
+</div>
+
+
+
+
+
+<div class="card">
+
+
+<button
+class="btn-success"
+type="submit">
+
+Save
+
+</button>
+
+
+</div>
+
+
+</form>
+
+
+
+
+
+
+
+<!-- Konfiguration -->
+
+
+<div class="card">
+
+
+<h3>
+💾 Configuration
+</h3>
+
+
+
+<p style="color:#999;">
+
+The show can be exported as a DMX file and imported again.
+
+</p>
+
+
+
+
+
+<!-- Export -->
+
+
+<div class="card">
+
+
+<h2>
+Export
+</h2>
+
+
+<label>
+Select File
+</label>
+
+
+<select
+id="exportSelect"
+class="btna"
+multiple
+size="6">
+
+
+<option value="scenes">
+Scenes
+</option>
+
+
+<option value="fades">
+Fades
+</option>
+
+
+<option value="sequences">
+Sequences
+</option>
+
+
+<option value="triggers">
+Trigger
+</option>
+
+
+<option value="devices">
+Devices
+</option>
+
+
+<option value="all">
+Everything
+</option>
+
+
+</select>
+
+
+<br><br>
+
+
+<button
+type="button"
+class="btn-primary"
+onclick="exportDMX()">
+
+Export File
+
+</button>
+
+
+</div>
+
+
+
+
+
+<!-- Import -->
+
+
+<div class="card">
+
+
+<h2>
+Import
+</h2>
+
+
+<form
+id="importForm"
+action="/settings/import"
+method="post"
+enctype="multipart/form-data">
+
+
+<input
+id="import-file"
+name="file"
+type="file"
+accept=".dmx"
+hidden
+onchange="importDMX()">
+
+
+
+<button
+type="button"
+onclick="document.getElementById('import-file').click()">
+
+⬆ Import Configuration (.dmx)
+
+</button>
+
+
+</form>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+
+
+<!-- Wartung -->
+
+
+<div class="card">
+
+
+<h3>
+🧹 Maintenance
+</h3>
+
+
+<div class="scene-actions">
+
+
+<button
+class="btn-primary"
+type="button"
+onclick="window.location='/settings/reset/settings'">
+
+Reset Settings
+
+</button>
+
+
+
+<button
+class="btn-danger"
+type="button"
+onclick="window.location='/settings/reset/all'">
+
+Delete All Data
+
+</button>
+
+
+</div>
+
+
+<p style="margin-top:15px;color:#999;">
+
+
+"Reset Settings" only resets the settings.
+
+"Delete All Data" removes devices, triggers, strobes, scenes, fades, and settings.
+
+
+</p>
+
+
+</div>
+
+
+
+
+
+
+
+<script>
+
+
+function importDMX(){
+
+
+let file =
+document.getElementById(
+"import-file"
+);
+
+
+
+if(file.files.length > 0){
+
+
+if(confirm(
+"Import Configuration?"
+)){
+
+
+document
+.getElementById(
+"importForm"
+)
+.submit();
+
+
+}
+
+
+}
+
+
+}
+
+
+
+
+
+function exportDMX(){
+
+
+let select =
+document.getElementById(
+"exportSelect"
+);
+
+
+let values=[];
+
+
+
+for(let option of select.options){
+
+
+if(option.selected){
+
+values.push(
+option.value
+);
+
+}
+
+}
+
+
+
+if(values.length === 0){
+
+alert(
+"Please select at least one category"
+);
+
+return;
+
+}
+
+
+
+
+if(values.includes("all")){
+
+
+values=[
+
+"scenes",
+"fades",
+"sequences",
+"triggers",
+"devices"
+
+];
+
+
+}
+
+
+
+let url =
+"/settings/export?";
+
+
+
+values.forEach(
+item=>{
+
+
+url +=
+"items="
++
+item
++
+"&";
+
+
+}
+);
+
+
+
+window.location.href=url;
+
+
+}
+
+
+</script>
+
+
+{% endblock %}

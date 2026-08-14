@@ -1,12 +1,24 @@
 import socket
 import qrcode
-import os
 from settings import settings
+from pathlib import Path
+import sys
+
+
+def get_base_dir():
+
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+
+    return Path(__file__).resolve().parent
+
 
 def get_local_ip():
 
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
     if settings.host != "127.0.0.1":
+
         try:
             s.connect(("8.8.8.8", 80))
             ip = s.getsockname()[0]
@@ -17,26 +29,28 @@ def get_local_ip():
         finally:
             s.close()
 
-        
     else:
         ip = "127.0.0.1"
 
     return ip
 
+
 def create_qr():
 
     ip = get_local_ip()
 
-    url = f"http://{ip}:{settings.get("port")}"
-
+    url = f"http://{ip}:{settings.get('port')}"
 
     img = qrcode.make(url)
 
+    static_dir = get_base_dir() / "static"
+    static_dir.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-    path = "static/network_qr.png"
-
+    path = static_dir / "network_qr.png"
 
     img.save(path)
-
 
     return url

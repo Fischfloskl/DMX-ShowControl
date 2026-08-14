@@ -5,7 +5,13 @@ import webview
 from dmx_manager import DMXManager
 from reference_checker import ReferenceChecker
 from sequence_manager import SequenceManager
+import sys
+from pathlib import Path
 
+LOG = Path(sys.executable).resolve().parent / "startup.log"
+
+with open(LOG, "w", encoding="utf-8") as f:
+    f.write("MAIN START\n")
 
 from app import (
     app,
@@ -17,7 +23,8 @@ from app import (
     dmx_manager,
     fade_engine,
     fade_manager,
-    trigger_engine
+    trigger_engine,
+    strobe_manager
 )
 
 from settings import settings
@@ -25,7 +32,9 @@ from settings import settings
 checker = ReferenceChecker(
     scene_manager,
     sequence_manager,
-    trigger_manager
+    trigger_manager,
+    fade_manager,
+    strobe_manager
 )
 
 print("Verbinde Arduino...")
@@ -62,15 +71,21 @@ def run_flask():
         app,
         host=settings.host,
         port=settings.port,
-        debug=False
+        debug=False,
+        allow_unsafe_werkzeug=True
     )
 
 
-threading.Thread(
+server_thread = threading.Thread(
     target=run_flask,
     daemon=True
-).start()
+)
 
+server_thread.start()
+
+
+# Kurz warten, damit Flask den Port öffnen kann
+time.sleep(1)
 
 
 webview.create_window(

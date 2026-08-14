@@ -1,0 +1,527 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+
+    <h1>
+        {{ strobe.name }}
+    </h1>
+
+</div>
+
+
+<form
+    method="POST"
+    action="/strobes/save"
+>
+
+
+<input
+    type="hidden"
+    name="id"
+    value="{{ strobe.id }}"
+>
+
+
+<div class="button-row">
+
+    <button
+        type="submit" class="btn-success"
+    >
+        Save
+    </button>
+
+
+    <button onclick="window.location.href='/strobes'" class="btna" type="button">
+        Cancel
+    </button>
+
+
+    {% if strobe.id %}
+
+    <button type="button"
+        onclick="confirmDelete()" class="btn-danger"
+    >
+        Delete
+</button>
+
+    {% endif %}
+
+</div>
+
+<!-- ================================= -->
+<!-- Allgemein -->
+<!-- ================================= -->
+
+<div class="panel">
+
+    <h2>General</h2>
+
+
+    <div class="form-row">
+
+        <label>
+            Name
+        </label>
+
+        <input
+            type="text"
+            name="name"
+            class="btna"
+            value="{{ strobe.name }}"
+            required
+        >
+
+    </div>
+
+</div>
+
+
+<!-- ================================= -->
+<!-- Timing -->
+<!-- ================================= -->
+
+<div class="panel">
+
+    <h2>Timing</h2>
+
+    <div class="mode-selector">
+
+        <label class="mode-option">
+
+        <input
+        type="radio"
+        name="mode"
+        value="timed"
+        onchange="window.location.href='/strobes/change-mode?id={{ strobe.id }}&mode=timed'"
+        {% if strobe.mode == "timed" %}
+        checked
+        {% endif %}
+        >
+
+        <div class="mode-card">
+
+        <strong>
+        Timed
+        </strong>
+
+        <span>
+        Display for a specific period of time
+        </span>
+
+        </div>
+
+        </label>
+
+
+
+        <label class="mode-option">
+
+        <input
+        type="radio"
+        name="mode"
+        value="counted"
+        onchange="window.location.href='/strobes/change-mode?id={{ strobe.id }}&mode=counted'"
+        {% if strobe.mode == "counted" %}
+        checked
+        {% endif %}
+        >
+
+        <div class="mode-card">
+
+        <strong>
+        Counted
+        </strong>
+
+        <span>
+        Specify a number of repetitions
+        </span>
+
+        </div>
+
+        </label>
+
+
+        </div>
+
+        <br>
+        <br>
+
+    <div class="form-row">
+        {% if strobe.mode == "counted" %}
+        <label>
+            Number of changes
+        </label>
+
+        <input
+            type="number"
+            name="cycles"
+            min="1"
+            class="btna"
+            value="{{ strobe.cycles }}"
+            required
+        >
+        {% endif %}
+
+        {% if strobe.mode == "timed" %}
+        <label>
+            Total Display Time (ms)
+        </label>
+
+        <input
+            type="number"
+            name="time"
+            min="1"
+            class="btna"
+            value="{{ strobe.time }}"
+            required
+        >
+        {% endif %}
+
+    </div>
+
+
+    <div class="form-row">
+
+        <label>
+            Display Time A (ms)
+        </label>
+
+        <input
+            type="number"
+            name="time_a"
+            min="1"
+            class="btna"
+            value="{{ strobe.time_a }}"
+            required
+        >
+
+    </div>
+
+
+    <div class="form-row">
+
+        <label>
+            Display Time B (ms)
+        </label>
+
+        <input
+            type="number"
+            name="time_b"
+            min="1"
+            class="btna"
+            value="{{ strobe.time_b }}"
+            required
+        >
+
+    </div>
+
+</div>
+
+
+<!-- ================================= -->
+<!-- Zustände -->
+<!-- ================================= -->
+
+<div class="panel">
+
+    <h2>
+        States
+    </h2>
+
+
+    <p>
+        The states are played back in this order
+    </p>
+
+
+    <div id="state-list">
+
+
+        {% for state in strobe.states %}
+
+        <div class="scene-row">
+
+
+            <select
+                name="state_type" class="btna"
+                onchange="updateTarget(this)"
+            >
+
+                <option
+                    value="scene"
+                    {% if state.type == "scene" %}
+                    selected
+                    {% endif %}
+                >
+                    Scene
+                </option>
+
+
+                <option
+                    value="fade"
+                    {% if state.type == "fade" %}
+                    selected
+                    {% endif %}
+                >
+                    Fade
+                </option>
+
+            </select>
+            <br>
+            <br>
+
+            <select
+                name="state_target"
+                class="btna state-target "
+                data-type="{{ state.type }}"
+            >
+
+                {% if state.type == "scene" %}
+
+                    {% for scene in scenes %}
+
+                    <option
+                        value="{{ scene.id }}"
+                        {% if scene.id == state.target %}
+                        selected
+                        {% endif %}
+                    >
+                        {{ scene.name }}
+                    </option>
+
+                    {% endfor %}
+
+                {% else %}
+
+                    {% for fade in fades %}
+
+                    <option
+                        value="{{ fade.id }}"
+                        {% if fade.id == state.target %}
+                        selected
+                        {% endif %}
+                    >
+                        {{ fade.name }}
+                    </option>
+
+                    {% endfor %}
+
+                {% endif %}
+
+            </select>
+
+            <br>
+            <br>
+
+
+            <button
+                type="button"
+                class="btna"
+                onclick="this.parentElement.remove()"
+            >
+                Remove
+            </button>
+            <br>
+            <br>
+            <hr class="action-divider">
+            <br>
+            <br>
+
+
+        </div>
+
+        {% endfor %}
+
+
+    </div>
+
+
+    <button
+        type="button"
+        class="btna"
+        onclick="addState()"
+    >
+        + Add State
+    </button>
+    <br>
+    <br>
+
+</div>
+
+
+<!-- ================================= -->
+<!-- Buttons -->
+<!-- ================================= -->
+
+<div class="button-row">
+
+    <button
+        type="submit" class="btn-success"
+    >
+        Save
+    </button>
+
+
+    <button onclick="window.location.href='/strobes'" class="btna" type="button">
+        Cancel
+    </button>
+
+
+    {% if strobe.id %}
+
+    <button type="button"
+        onclick="confirmDelete()" class="btn-danger"
+    >
+        Delete
+</button>
+
+    {% endif %}
+
+</div>
+
+
+</form>
+
+
+<script>
+
+
+function addState() {
+
+    const list =
+        document.getElementById(
+            "state-list"
+        );
+
+
+    const row =
+        document.createElement(
+            "div"
+        );
+
+
+    row.className =
+        "scene-row";
+
+
+    row.innerHTML = `
+
+        <select
+            name="state_type" class="btna"
+            onchange="updateTarget(this)"
+        >
+
+            <option value="scene">
+                Scene
+            </option>
+
+            <option value="fade">
+                Fade
+            </option>
+
+        </select>
+
+
+        <select
+            name="state_target"
+            class="btna state-target"
+            data-type="scene"
+        >
+
+            {% for scene in scenes %}
+
+            <option value="{{ scene.id }}">
+                {{ scene.name }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+
+        <button
+            type="button" class="btna"
+            onclick="this.parentElement.remove()"
+        >
+            Remove
+        </button>
+        <br>
+        <br>
+        <hr class="action-divider">
+        <br>
+        <br>
+
+    `;
+
+
+    list.appendChild(row);
+
+}
+
+
+function updateTarget(typeSelect) {
+
+    const row =
+        typeSelect.parentElement;
+
+
+    const target =
+        row.querySelector(
+            ".state-target"
+        );
+
+
+    const type =
+        typeSelect.value;
+
+
+    target.innerHTML = "";
+
+
+    if (type === "scene") {
+
+        {% for scene in scenes %}
+
+        target.innerHTML += `
+            <option value="{{ scene.id }}">
+                {{ scene.name }}
+            </option>
+        `;
+
+        {% endfor %}
+
+    }
+
+    else {
+
+        {% for fade in fades %}
+
+        target.innerHTML += `
+            <option value="{{ fade.id }}">
+                {{ fade.name }}
+            </option>
+        `;
+
+        {% endfor %}
+
+    }
+
+
+    target.dataset.type = type;
+
+}
+
+function confirmDelete() {
+    if(confirm("Do you really want to delete this strobe?")){
+
+        window.location.href =
+        '/strobes/delete?id={{ strobe.id }}';
+
+    }
+}
+
+</script>
+
+{% endblock %}

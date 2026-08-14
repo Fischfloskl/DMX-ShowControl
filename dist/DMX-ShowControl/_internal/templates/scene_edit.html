@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+
+{% block content %}
+
+<style>
+.color-circle{
+
+    width:22px;
+    height:22px;
+
+    border-radius:50%;
+
+    margin:auto;
+
+    border:2px solid rgba(255,255,255,0.2);
+
+    background:var(--color);
+}
+</style>
+
+<h1>
+Edit scene
+</h1>
+
+
+
+<div class="card">
+
+<h3>
+General
+</h3>
+
+
+<form action="/scenes/edit/save" method="post">
+
+
+<input
+type="hidden"
+name="id"
+value="{{ scene['id'] }}">
+
+
+
+<label>
+Name
+</label>
+
+<input
+class="btna"
+name="name"
+value="{{ scene['name'] }}"
+required>
+
+
+<br><br>
+
+
+<button
+class="btn-success"
+type="submit">
+
+Save
+
+</button>
+
+<button
+    class="btn-primary"
+    onclick="applyScene()"
+    type="button">
+    Apply scene to DMX
+</button>
+
+<button
+    class="btn-primary"
+    onclick="clearDMX()"
+    type="button">
+    Clear DMX
+</button>
+
+
+<button
+type="button"
+class="btna"
+onclick="window.location.href='/scenes'">
+
+Cancel
+
+</button>
+
+
+</form>
+
+
+</div>
+
+
+
+
+
+
+<div class="card">
+
+
+<h3>
+Devices in this scene
+</h3>
+
+
+
+<div class="table-wrapper">
+
+<table>
+
+
+<tr>
+
+<th>
+Device
+</th>
+
+<th>
+</th>
+
+<th>
+Status
+</th>
+
+<th>
+Actions
+</th>
+
+</tr>
+
+
+
+
+{% for device in devices %}
+
+
+<tr>
+
+
+<td>
+
+{{ device["name"] }}
+
+</td>
+
+<td style="text-align:center;">
+<div class="color-circle" style="--color: {{ device.color }};"></div>
+</td>
+
+<td>
+
+{% if device["id"]|string in scene["devices"] %}
+
+Active
+
+{% else %}
+
+Not added
+
+{% endif %}
+
+</td>
+
+
+
+<td>
+
+
+
+{% if device["id"]|string in scene["devices"] %}
+
+
+<button
+class="btna"
+onclick="window.location.href='/scenes/device?scene={{ scene['id'] }}&device={{ device['id'] }}'" style="background: #292929;">
+
+Edit
+
+</button>
+
+
+
+<button
+class="btn-danger"
+onclick="removeDevice({{ scene['id'] }}, {{ device['id'] }})">
+
+Delete
+
+</button>
+
+
+
+{% else %}
+
+
+<button
+class="btn-success"
+onclick="addDevice({{ scene['id'] }}, {{ device['id'] }})">
+
+Add
+
+</button>
+
+
+{% endif %}
+
+
+
+</td>
+
+
+</tr>
+
+
+{% endfor %}
+
+
+</table>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div class="card">
+
+
+<h3>
+Dangerous Actions
+</h3>
+
+
+<button
+class="btn-danger"
+onclick="deleteScene({{ scene['id'] }})">
+
+Delete scene
+
+</button>
+
+
+</div>
+
+
+
+
+
+<script>
+
+function applyScene(){
+
+    fetch(
+        "/scenes/apply?id={{ scene.id }}"
+    );
+
+}
+
+async function clearDMX(){
+
+    await fetch("/dmx/clear");
+
+}
+
+function addDevice(scene,device){
+
+    window.location.href =
+    "/scenes/device/add?scene="
+    + scene
+    + "&device="
+    + device;
+
+}
+
+
+
+function removeDevice(scene,device){
+
+    if(confirm("Remove device from scene?")){
+
+        window.location.href =
+        "/scenes/device/remove?scene="
+        + scene
+        + "&device="
+        + device;
+
+    }
+
+}
+
+
+
+function deleteScene(id){
+
+    if(confirm("Delete scene?")){
+
+        window.location.href =
+        "/scenes/delete?id="
+        + id;
+
+    }
+
+}
+
+
+</script>
+
+
+{% endblock %}

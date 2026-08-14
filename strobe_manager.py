@@ -185,18 +185,28 @@ class StrobeManager:
     # GET
     # -----------------------------------------
 
-    def get_id(self, strobe_id):
+    def get(self, name):
 
         for strobe in self.strobes:
 
-            if int(
-                strobe.get("id", -1)
-            ) == int(strobe_id):
-
+            if strobe.get("name") == name:
                 return strobe
 
         return None
 
+    def get_id(self, strobe_id):
+
+        try:
+            strobe_id = int(strobe_id)
+        except (TypeError, ValueError):
+            return None
+
+        for strobe in self.strobes:
+
+            if strobe.get("id") == strobe_id:
+                return strobe
+
+        return None
 
     def get_next_id(self):
 

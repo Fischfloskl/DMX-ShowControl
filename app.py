@@ -26,7 +26,10 @@ import time
 
 app = Flask(__name__)
 
-socketio.init_app(app)
+socketio.init_app(
+    app,
+    async_mode="threading"
+)
 
 
 url = create_qr()
@@ -102,7 +105,9 @@ sequence_manager.set_controller(
 reference_checker = ReferenceChecker(
     scene_manager,
     sequence_manager,
-    trigger_manager
+    trigger_manager,
+    fade_manager,
+    strobe_manager
 )
 
 trigger_engine = TriggerEngine(

@@ -1,0 +1,85 @@
+<div class="card">
+
+    <h3>Global Trigger Timing</h3>
+
+    <div
+        id="timer-global"
+        style="
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            margin: 30px 0;
+        "
+    >
+        {% if global_time %} {{ global_time | round(3) }} s {% else %} 0.000 s {% endif %}
+    </div>
+    
+    <div
+        style="
+            display: flex;
+            gap: 10px;
+            justify-content: center;">
+        <button
+            id="copyButton"
+            class="btna"
+            type="button"
+            onclick="copyTimerglobal(this)">
+            Copy
+        </button>
+        <button
+            class="btn-secondary"
+            type="button"
+            onclick="fetch('/timing/reset', {method: 'POST'});updateDisplayglobal();location.reload();">
+            Reset
+        </button>
+        <select
+            id="unitSelect"
+            onchange="updateDisplayglobal()"
+            class="btna">
+
+            <option value="ms">
+                Milliseconds
+            </option>
+
+            <option value="s" selected>
+                Seconds
+            </option>
+
+            <option value="min">
+                Minutes
+            </option>
+
+        </select>
+    </div>
+
+
+    <div style="margin-top: 20px;">
+
+        
+
+    </div>
+
+</div>
+
+
+<script>
+    const global_time = {{ global_time }};
+</script>
+<script>
+// ------------------------------------------------------------
+// RESET
+// ------------------------------------------------------------
+
+socket.on(
+    "timing_reset",
+    function() {
+
+        global_time =
+            0;
+
+
+        updateDisplayglobal();
+        location.reload();
+    }
+);
+</script>

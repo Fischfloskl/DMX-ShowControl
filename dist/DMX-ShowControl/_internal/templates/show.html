@@ -1,0 +1,392 @@
+{% extends "show_base.html" %}
+
+
+{% block content %}
+
+<h1>
+Dashboard
+</h1>
+
+
+<div class="card collapsible">
+
+    <h3 onclick="toggleCard(this)">
+        Status ▼
+    </h3>
+
+    <div class="card-content">
+
+        <p>
+            Console:
+            <span id="connection-status" class="status-offline">
+                Offline
+            </span>
+        </p>
+
+        <button 
+        class="btn-primary"
+        onclick="reconnect()"
+        id="reconnect-button">
+
+            Reconnect
+
+        </button>
+
+    </div>
+
+</div>
+
+
+<div class="card collapsible collapsed">
+
+    <h3 onclick="toggleCard(this)">
+        Network ▲
+    </h3>
+
+
+    <div class="card-content">
+
+        <p>
+            Webinterface:
+        </p>
+
+
+        <h2>
+        {% if network_mode == "lan" %}
+
+        http://{{ ip }}:{{ port }}
+
+        {% endif %}
+        </h2>
+
+
+        {% if network_mode == "lan" and create_qr %}
+
+        <img 
+        src="/static/network_qr.png"
+        width="200"
+        class="qr_code">
+
+        {% endif %}
+
+
+    </div>
+
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+
+<script>
+
+const socket = io();
+
+
+socket.on(
+    "status_update",
+    function(data){
+
+        let status =
+            document.getElementById(
+                "connection-status"
+            );
+
+
+        if(data.connected){
+
+            status.innerHTML = "Online";
+
+            status.className =
+                "status-online";
+
+        }
+        else{
+
+            status.innerHTML = "Offline";
+
+            status.className =
+                "status-offline";
+
+        }
+
+        let button =
+            document.getElementById(
+                "reconnect-button"
+            );
+
+
+        if(data.connected){
+
+            button.style.display = "none";
+
+        }
+        else{
+
+            button.style.display = "block";
+
+        }
+
+    }
+);
+
+
+
+function reconnect(){
+
+    if(!confirm("Reconnect DMX-console? ~5 sec."))
+        return;
+
+
+    fetch(
+        "/api/reconnect",
+        {
+            method:"POST"
+        }
+    );
+
+}
+
+</script>
+
+<h1>
+Show
+</h1>
+
+
+<div class="show-grid">
+
+
+<h3>
+Scenes
+</h3>
+
+
+{% for scene in scenes %}
+
+<button
+class="show-button"
+id="scene-{{scene.id}}"
+onclick="applyScene({{scene.id}}, this)">
+
+{{scene.name}}
+
+</button>
+
+{% endfor %}
+
+
+
+<br><br><br>
+
+
+<h3>
+Fades
+</h3>
+
+
+{% for fade in fades %}
+
+<button
+class="show-button fade"
+id="fade-{{fade.id}}"
+onclick="playFade({{fade.id}}, this)">
+
+{{fade.name}}
+
+</button>
+
+{% endfor %}
+
+
+
+<br><br><br>
+
+
+<h3>
+Sequences
+</h3>
+
+
+{% for sequence in sequences %}
+
+<button
+class="show-button fade"
+id="seq-{{sequence.id}}"
+onclick="playSeq({{sequence.id}}, this)">
+
+{{sequence.name}}
+
+</button>
+
+{% endfor %}
+
+<br><br><br>
+
+<h3>
+Trigger
+</h3>
+
+
+<div class="trigger-list">
+
+
+{% for trigger in triggers %}
+
+<div class="trigger-card">
+
+
+<div>
+
+{{trigger.name}}
+
+</div>
+
+
+
+<div>
+
+{% if trigger.enabled %}
+
+<span class="status-on">
+Active
+</span>
+
+<button
+onclick="execute_trigger({{ trigger.id }})"
+class="btn-success" style="margin-left: 10px;"
+>
+Start
+</button>
+
+{% else %}
+
+<span class="status-off">
+Off
+</span>
+
+{% endif %}
+
+</div>
+
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
+</div>
+
+
+
+<script>
+
+
+function clearActive(){
+
+    document
+    .querySelectorAll(".show-button")
+    .forEach(
+        b => b.classList.remove("active")
+    );
+
+}
+
+
+
+function activate(button){
+
+    clearActive();
+
+    button.classList.add(
+        "active"
+    );
+
+}
+
+
+
+function applyScene(id, button){
+
+
+    fetch(
+        "/scenes/apply?id="+id
+    );
+
+
+    activate(button);
+
+}
+
+
+
+function playFade(id, button){
+
+
+    fetch(
+        "/fades/play?id="+id
+    );
+
+
+    activate(button);
+
+}
+
+
+
+function playSeq(id, button){
+
+
+    fetch(
+        "/sequences/start?id="+id
+    );
+
+
+    activate(button);
+
+}
+
+function execute_trigger(id){
+
+
+    fetch(
+        "/triggers/execute?id="+id
+    );
+}
+
+function toggleCard(header){
+
+    let card = header.parentElement;
+
+
+    card.classList.toggle(
+        "collapsed"
+    );
+
+
+    if(header.innerHTML.includes("▼")){
+
+        header.innerHTML =
+        header.innerHTML.replace(
+            "▼",
+            "▲"
+        );
+
+    }
+    else{
+
+        header.innerHTML =
+        header.innerHTML.replace(
+            "▲",
+            "▼"
+        );
+
+    }
+
+}
+</script>
+
+
+
+{% endblock %}
