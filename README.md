@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.jpg" alt="DMX-ShowControl Logo" width="300">
+  <img src="assets/logo.jpg" alt="DMX-ShowControl Logo" style="max-width: 100%; height: auto;">
 </p>
 
 # DMX-ShowControl
