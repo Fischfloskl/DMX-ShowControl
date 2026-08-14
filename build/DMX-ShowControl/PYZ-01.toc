@@ -1,5 +1,5 @@
 ('C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
- 'EN\\build\\DMX-ShowControl\\PYZ-01.pyz',
+ 'EN\\DMX-ShowControl\\build\\DMX-ShowControl\\PYZ-01.pyz',
  [('PIL',
    'C:\\Users\\giuli\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\PIL\\__init__.py',
    'PYMODULE'),
@@ -398,11 +398,12 @@
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\Lib\\_threading_local.py',
    'PYMODULE'),
   ('app',
-   'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - EN\\app.py',
+   'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
+   'EN\\DMX-ShowControl\\app.py',
    'PYMODULE'),
   ('arduino_helper',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\arduino_helper.py',
+   'EN\\DMX-ShowControl\\arduino_helper.py',
    'PYMODULE'),
   ('argparse',
    'C:\\Program '
@@ -917,7 +918,7 @@
    'PYMODULE'),
   ('device_manager',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\device_manager.py',
+   'EN\\DMX-ShowControl\\device_manager.py',
    'PYMODULE'),
   ('difflib',
    'C:\\Program '
@@ -929,7 +930,7 @@
    'PYMODULE'),
   ('dmx_manager',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\dmx_manager.py',
+   'EN\\DMX-ShowControl\\dmx_manager.py',
    'PYMODULE'),
   ('dns',
    'C:\\Users\\giuli\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\dns\\__init__.py',
@@ -1104,19 +1105,19 @@
    'PYMODULE'),
   ('export_manager',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\export_manager.py',
+   'EN\\DMX-ShowControl\\export_manager.py',
    'PYMODULE'),
   ('extensions',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\extensions.py',
+   'EN\\DMX-ShowControl\\extensions.py',
    'PYMODULE'),
   ('fade_engine',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\fade_engine.py',
+   'EN\\DMX-ShowControl\\fade_engine.py',
    'PYMODULE'),
   ('fade_manager',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\fade_manager.py',
+   'EN\\DMX-ShowControl\\fade_manager.py',
    'PYMODULE'),
   ('fileinput',
    'C:\\Program '
@@ -2132,7 +2133,7 @@
    'PYMODULE'),
   ('import_manager',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\import_manager.py',
+   'EN\\DMX-ShowControl\\import_manager.py',
    'PYMODULE'),
   ('importlib',
    'C:\\Program '
@@ -2508,7 +2509,7 @@
    'PYMODULE'),
   ('name_helper',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\name_helper.py',
+   'EN\\DMX-ShowControl\\name_helper.py',
    'PYMODULE'),
   ('netrc',
    'C:\\Program '
@@ -2516,7 +2517,7 @@
    'PYMODULE'),
   ('network',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\network.py',
+   'EN\\DMX-ShowControl\\network.py',
    'PYMODULE'),
   ('nturl2path',
    'C:\\Program '
@@ -3133,7 +3134,7 @@
    'PYMODULE'),
   ('reference_checker',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\reference_checker.py',
+   'EN\\DMX-ShowControl\\reference_checker.py',
    'PYMODULE'),
   ('requests',
    'C:\\Users\\giuli\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\requests\\__init__.py',
@@ -3196,7 +3197,7 @@
    'PYMODULE'),
   ('scene_manager',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\scene_manager.py',
+   'EN\\DMX-ShowControl\\scene_manager.py',
    'PYMODULE'),
   ('secrets',
    'C:\\Program '
@@ -3208,7 +3209,7 @@
    'PYMODULE'),
   ('sequence_manager',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\sequence_manager.py',
+   'EN\\DMX-ShowControl\\sequence_manager.py',
    'PYMODULE'),
   ('serial',
    'C:\\Users\\giuli\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\serial\\__init__.py',
@@ -3254,11 +3255,11 @@
    'PYMODULE'),
   ('serial_manager',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\serial_manager.py',
+   'EN\\DMX-ShowControl\\serial_manager.py',
    'PYMODULE'),
   ('settings',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\settings.py',
+   'EN\\DMX-ShowControl\\settings.py',
    'PYMODULE'),
   ('setuptools',
    'C:\\Users\\giuli\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\setuptools\\__init__.py',
@@ -3672,7 +3673,7 @@
    'PYMODULE'),
   ('show_controller',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\show_controller.py',
+   'EN\\DMX-ShowControl\\show_controller.py',
    'PYMODULE'),
   ('shutil',
    'C:\\Program '
@@ -3820,7 +3821,7 @@
    'PYMODULE'),
   ('strobe_manager',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\strobe_manager.py',
+   'EN\\DMX-ShowControl\\strobe_manager.py',
    'PYMODULE'),
   ('subprocess',
    'C:\\Program '
@@ -3877,11 +3878,11 @@
    'PYMODULE'),
   ('trigger_engine',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\trigger_engine.py',
+   'EN\\DMX-ShowControl\\trigger_engine.py',
    'PYMODULE'),
   ('trigger_manager',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\trigger_manager.py',
+   'EN\\DMX-ShowControl\\trigger_manager.py',
    'PYMODULE'),
   ('tty',
    'C:\\Program '
@@ -4142,7 +4143,7 @@
    'PYMODULE'),
   ('watcher',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\watcher.py',
+   'EN\\DMX-ShowControl\\watcher.py',
    'PYMODULE'),
   ('webbrowser',
    'C:\\Program '

@@ -1,10 +1,10 @@
 ('C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
- 'EN\\build\\DMX-ShowControl\\DMX-ShowControl.exe',
+ 'EN\\DMX-ShowControl\\build\\DMX-ShowControl\\DMX-ShowControl.exe',
  False,
  False,
  True,
  ['C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-  'EN\\assets/icon.ico'],
+  'EN\\DMX-ShowControl\\assets/icon.ico'],
  None,
  False,
  False,
@@ -32,32 +32,32 @@
  None,
  None,
  'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
- 'EN\\build\\DMX-ShowControl\\DMX-ShowControl.pkg',
+ 'EN\\DMX-ShowControl\\build\\DMX-ShowControl\\DMX-ShowControl.pkg',
  [('pyi-disable-windowed-traceback', '', 'OPTION'),
   ('pyi-contents-directory _internal', '', 'OPTION'),
   ('PYZ-00.pyz',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\build\\DMX-ShowControl\\PYZ-00.pyz',
+   'EN\\DMX-ShowControl\\build\\DMX-ShowControl\\PYZ-00.pyz',
    'PYZ'),
   ('struct',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\build\\DMX-ShowControl\\localpycs\\struct.pyc',
+   'EN\\DMX-ShowControl\\build\\DMX-ShowControl\\localpycs\\struct.pyc',
    'PYMODULE'),
   ('pyimod01_archive',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\build\\DMX-ShowControl\\localpycs\\pyimod01_archive.pyc',
+   'EN\\DMX-ShowControl\\build\\DMX-ShowControl\\localpycs\\pyimod01_archive.pyc',
    'PYMODULE'),
   ('pyimod02_importers',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\build\\DMX-ShowControl\\localpycs\\pyimod02_importers.pyc',
+   'EN\\DMX-ShowControl\\build\\DMX-ShowControl\\localpycs\\pyimod02_importers.pyc',
    'PYMODULE'),
   ('pyimod03_ctypes',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\build\\DMX-ShowControl\\localpycs\\pyimod03_ctypes.pyc',
+   'EN\\DMX-ShowControl\\build\\DMX-ShowControl\\localpycs\\pyimod03_ctypes.pyc',
    'PYMODULE'),
   ('pyimod04_pywin32',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\build\\DMX-ShowControl\\localpycs\\pyimod04_pywin32.pyc',
+   'EN\\DMX-ShowControl\\build\\DMX-ShowControl\\localpycs\\pyimod04_pywin32.pyc',
    'PYMODULE'),
   ('pyiboot01_bootstrap',
    'C:\\Users\\giuli\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\PyInstaller\\loader\\pyiboot01_bootstrap.py',
@@ -76,12 +76,12 @@
    'PYSOURCE'),
   ('main',
    'C:\\Users\\giuli\\Documents\\Python Projekte\\DMX-ShowControl - '
-   'EN\\main.py',
+   'EN\\DMX-ShowControl\\main.py',
    'PYSOURCE')],
  [],
  False,
  False,
- 1786734310,
+ 1786735870,
  [('runw.exe',
    'C:\\Users\\giuli\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
    'EXECUTABLE')],
