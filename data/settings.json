@@ -1,0 +1,27 @@
+{
+    "type": "settings",
+    "version": 1,
+    "data": {
+        "network_mode": "lan",
+        "port": 5000,
+        "refresh_rate": 50,
+        "create_qr": true,
+        "mode": "show",
+        "timing-global-record": "r",
+        "timing-global-sim": "mediaplaypause",
+        "timing-live": "f3",
+        "timing-mode": "global",
+        "external_applications": [
+            {
+                "path": "C:\\Program Files (x86)\\Tobias Erichsen\\loopMIDI\\loopMIDI.exe",
+                "start_with_app": true,
+                "stop_with_app": true
+            },
+            {
+                "path": "C:\\\\Windows\\\\System32\\\\notepad.exe",
+                "start_with_app": false,
+                "stop_with_app": false
+            }
+        ]
+    }
+}

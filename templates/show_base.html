@@ -21,7 +21,6 @@ DMX-ShowControl
 
 <body>
 
-
 <nav class="navbar">
 <div class="menu-button"
 onclick="toggleMenu()">
@@ -40,6 +39,13 @@ onclick="toggleMenu()">
 
 <div class="nav-links"
 id="mobileMenu">
+
+<a href="/" 
+{% if request.path == "/show" %}
+class="active"
+{% endif %}>
+Dashboard
+</a>
 
 <a href="/triggers"
 {% if request.path == "/triggers" %}

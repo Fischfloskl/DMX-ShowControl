@@ -346,6 +346,10 @@ button:hover,
 
 }
 
+button:disabled,
+button[disabled]{
+  opacity: 0.3;
+}
 
 
 .btn-danger {

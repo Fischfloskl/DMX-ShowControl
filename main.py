@@ -24,7 +24,8 @@ from app import (
     fade_engine,
     fade_manager,
     trigger_engine,
-    strobe_manager
+    strobe_manager,
+    external_application_manager
 )
 
 from settings import settings
@@ -58,6 +59,7 @@ def serial_watchdog():
 
         time.sleep(1)
 
+external_application_manager.start_all()
 
 threading.Thread(
     target=serial_watchdog,
@@ -96,6 +98,13 @@ webview.create_window(
 )
 
 
-webview.start()
+try:
 
-os._exit(0)
+    webview.start()
+
+finally:
+
+    print("DMX-ShowControl wird beendet...")
+    external_application_manager.stop_all()
+
+#os._exit(0)

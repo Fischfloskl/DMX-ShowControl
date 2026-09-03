@@ -1,6 +1,7 @@
 <div class="card">
 
     <h3>Global Trigger Timing</h3>
+    <p>Measures the time that has elapsed since the last of the two triggered events.<br>{% if mode == "edit" %} <h3><strong style="color: #ff6262">Please use "Showmode".</strong></h3>{% endif %}</p>
 
     <div
         id="timer-global"
@@ -27,13 +28,23 @@
             Copy
         </button>
         <button
+            id="copyButton"
+            class="btna"
+            type="button"
+            style="{% if mode == 'edit' %}opacity:0.1;{% endif %}"
+            onclick="window.location.reload()">
+            Refresh
+        </button>
+        <button
             class="btn-secondary"
             type="button"
+            style="{% if mode == 'edit' %}opacity:0.1;{% endif %}"
             onclick="fetch('/timing/reset', {method: 'POST'});updateDisplayglobal();location.reload();">
             Reset
         </button>
         <select
             id="unitSelect"
+            style="{% if mode == 'edit' %}opacity:0.1;{% endif %}"
             onchange="updateDisplayglobal()"
             class="btna">
 

@@ -17,6 +17,7 @@ from trigger_engine import TriggerEngine
 from export_manager import ExportManager
 from import_manager import ImportManager
 from show_controller import ShowController
+from external_application_manager import ExternalApplicationManager
 
 import re
 import os
@@ -138,6 +139,7 @@ import_manager = ImportManager(
     trigger_manager,
     devices
 )
+external_application_manager = ExternalApplicationManager(settings)
 
 
 PYTHON_TO_JS_KEYS = {
@@ -330,9 +332,13 @@ def set_mode(mode):
         mode
     )
 
+    
+    if "/show" in request.referrer:
+        return redirect('/')
+
     settings.save()
 
-    return redirect("/")
+    return redirect(request.referrer or '/')
 
 # --------------------------------
 # SCENES
@@ -1705,7 +1711,8 @@ def save_settings():
     settings.save()
 
     #return redirect("/settings")
-    return redirect("/")
+    #return redirect("/")
+    return redirect(request.referrer or '/')
 
 @app.route("/settings/save-timing", methods=["POST"])
 def save_settings_timing():
@@ -1719,6 +1726,77 @@ def save_settings_timing():
 
     #return redirect("/settings")
     return redirect("/timing")
+
+
+@app.route("/settings/external-applications")
+def get_external_applications():
+
+    return jsonify(
+        settings.get_external_applications()
+    )
+
+
+@app.route(
+    "/settings/external-applications/add",
+    methods=["POST"]
+)
+def add_external_application():
+
+    data = request.get_json()
+
+    applications = (
+        settings.get_external_applications()
+    )
+
+    applications.append({
+        "path": data.get("path", ""),
+        "start_with_app":
+            bool(data.get("start_with_app", True)),
+        "stop_with_app":
+            bool(data.get("stop_with_app", True))
+    })
+
+    settings.set_external_applications(
+        applications
+    )
+
+    return jsonify(
+        success=True
+    )
+
+
+@app.route(
+    "/settings/external-applications/remove",
+    methods=["POST"]
+)
+def remove_external_application():
+
+    data = request.get_json()
+
+    index = data.get("index")
+
+    applications = (
+        settings.get_external_applications()
+    )
+
+    if (
+        not isinstance(index, int)
+        or index < 0
+        or index >= len(applications)
+    ):
+        return jsonify(
+            success=False
+        ), 400
+
+    applications.pop(index)
+
+    settings.set_external_applications(
+        applications
+    )
+
+    return jsonify(
+        success=True
+    )
 
 @app.route("/sequences")
 def sequences():

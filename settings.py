@@ -15,7 +15,8 @@ DEFAULT_SETTINGS = {
     "timing-global-record": "r",
     "timing-global-sim": "mediaplaypause",
     "timing-live": "f3",
-    "timing-mode": "live"
+    "timing-mode": "live",
+    "external_applications": []
 }
 
 
@@ -83,9 +84,10 @@ class SettingsManager:
 
 
 
-        self.settings = content.get(
-            "data",
-            DEFAULT_SETTINGS.copy()
+        self.settings = DEFAULT_SETTINGS.copy()
+
+        self.settings.update(
+            content.get("data", {})
         )
 
 
@@ -203,6 +205,26 @@ class SettingsManager:
             self.settings["timing-global-sim"] = {}
 
         self.settings["timing-global-sim"] = value
+        self.save()
+
+
+    def get_external_applications(self):
+
+        return self.get(
+            "external_applications"
+        ) or []
+
+
+    def set_external_applications(
+        self,
+        applications
+    ):
+
+        self.set(
+            "external_applications",
+            applications
+        )
+
         self.save()
 
 settings = SettingsManager()

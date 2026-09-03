@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% if mode == "edit" %}{% extends "base.html" %}{% else %}{% extends "show_base.html" %}{% endif %}
 
 {% block content %}
 

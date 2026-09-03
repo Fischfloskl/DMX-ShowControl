@@ -1,0 +1,27 @@
+{
+    "type": "triggers",
+    "version": 2,
+    "data": [
+        {
+            "id": 1,
+            "actions": [
+                {
+                    "type": "scene",
+                    "target": "1"
+                },
+                {
+                    "type": "keyboard",
+                    "keys": [
+                        "mediaplaypause"
+                    ]
+                }
+            ],
+            "name": "1",
+            "enabled": true,
+            "type": "keyboard",
+            "keys": [
+                "1"
+            ]
+        }
+    ]
+}
