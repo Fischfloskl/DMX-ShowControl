@@ -38,10 +38,6 @@ DMX-ShowControl is currently under active development and is not yet considered 
 
 Some parts of the application may still contain **German text** or untranslated interface elements. The user interface is currently being translated to English.
 
-A standalone **Windows `.exe` release is coming soon**.
-
-The planned executable will include the required Python runtime and dependencies, so users will not need to install Python separately.
-
 ---
 
 ## 🚀 Installation
@@ -69,9 +65,9 @@ python main.py
 
 ### Windows Release
 
-A standalone Windows `.exe` version will be released soon.
+A standalone Windows `.exe` release is available through the **GitHub Releases** section.
 
-The goal is to make DMX-ShowControl usable without requiring users to install Python or configure the development environment manually.
+The standalone version includes the required Python runtime and dependencies, so **Python does not need to be installed separately**.
 
 ---
 
@@ -114,7 +110,7 @@ Instead, DMX-ShowControl aims to provide a **simple and flexible show-control so
 
 DMX-ShowControl is designed with affordable and DIY-friendly hardware in mind.
 
-The current development setup uses an **Arduino** as a serial communication bridge between the computer and an **M5Stack DMX module**.
+The current development setup uses an **Arduino Nano / Leonardo-compatible board** as a serial communication bridge between the computer and an **M5Stack DMX module**.
 
 The basic communication path is:
 
@@ -124,7 +120,8 @@ DMX-ShowControl
     USB / Serial
        │
        ▼
-    Arduino
+ Arduino Nano /
+ Leonardo-compatible
        │
     DMX data
        │
@@ -137,7 +134,19 @@ M5Stack DMX Module
 
 The Arduino handles the communication between the computer and the DMX hardware, while the M5Stack DMX module is used for DMX output.
 
-This setup allows DMX-ShowControl to be used with relatively inexpensive hardware instead of requiring a dedicated professional DMX interface.
+### Arduino Firmware
+
+The Arduino firmware required for the current hardware setup is included in this repository.
+
+The current `.ino` file is:
+
+**[DMX_arduino_Buzz_updated-DMX-protocol.ino](https://github.com/Fischfloskl/DMX-ShowControl/blob/main/DMX_arduino_Buzz_updated-DMX-protocol/DMX_arduino_Buzz_updated-DMX-protocol.ino)**
+
+This firmware was originally developed as part of the **Buzz project** and currently also contains keyboard-related functionality.
+
+The firmware is being adapted for use with DMX-ShowControl. A simplified version without the keyboard functionality may be provided separately in the future.
+
+> **Note:** The current Arduino firmware is intended for the hardware and communication setup used during development. Compatibility with other Arduino boards or DMX hardware may require modifications.
 
 Additional DMX interfaces and hardware may be supported in the future.
 
@@ -159,7 +168,7 @@ Additional DMX interfaces and hardware may be supported in the future.
 ## 🗺️ Roadmap
 
 * [ ] Finish English UI translation
-* [ ] Release standalone Windows `.exe`
+* [x] Release standalone Windows `.exe`
 * [ ] Improve MIDI integration
 * [ ] Add MIDI Learn
 * [ ] Improve DMX fixture support
