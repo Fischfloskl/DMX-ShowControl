@@ -134,14 +134,25 @@ The DMX address is automatically calculated based on the start address.
 <label>
 DMX {{ device.start_channel + c }}
 </label>
-
+<br>
+<label class="checkbox-row">
+    <p style="color:#999;font-size: small;">Dimmer/Movement Channel</p>
+    <input
+        id="dimmer-channel"
+        type="checkbox"
+        class="checkbox"
+    >
+    
+</label>
+<br>
 
 <input
 class="btna"
 name="channel_{{ c+1 }}"
 value="{{ device.channel_names[c] if c < device.channel_names|length else 'CH' ~ (c+1) }}">
 
-
+<br>
+<br>
 </div>
 
 

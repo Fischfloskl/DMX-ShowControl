@@ -6,7 +6,7 @@
         "port": 5000,
         "refresh_rate": 50,
         "create_qr": true,
-        "mode": "show",
+        "mode": "edit",
         "timing-global-record": "r",
         "timing-global-sim": "mediaplaypause",
         "timing-live": "f3",

@@ -444,7 +444,7 @@ def add_fade():
 
         "id": fade_manager.next_id(),
 
-        "name": "Neuer Fade",
+        "name": "New Fade",
 
         "duration": 1000,
 
@@ -2153,7 +2153,7 @@ def add_strobe():
 
         "id": strobe_manager.get_next_id(),
 
-        "name": "Neuer Strobe",
+        "name": "New Strobe",
 
         "cycles": 10,
 
@@ -2168,14 +2168,17 @@ def add_strobe():
         "states": []
     }
 
+    strobe_id = str(strobe_manager.get_next_id())
 
-    return render_template(
+    save_strobe()
+    return redirect("/strobes/edit?id=" + strobe_id)
+    
+    """return render_template(
         "strobe_edit.html",
         strobe=strobe,
         scenes=scene_manager.scenes,
         fades=fade_manager.fades
-    )
-
+    )"""
 
 @app.route("/strobes/edit")
 def edit_strobe():
@@ -2194,7 +2197,7 @@ def edit_strobe():
     if not strobe:
 
         return (
-            "Strobe nicht gefunden",
+            "Strobe not found",
             404
         )
 
@@ -2212,7 +2215,6 @@ def edit_strobe():
     methods=["POST"]
 )
 def save_strobe():
-
     strobe_id = int(
         request.form.get(
             "id",
@@ -2272,7 +2274,7 @@ def save_strobe():
 
     strobe["name"] = request.form.get(
         "name",
-        "Neuer Strobe"
+        "New Strobe"
     )
 
 
@@ -2393,10 +2395,7 @@ def change_strobe_mode():
         strobe_id,
         mode
     ):
-        return (
-            "Strobe oder Modus ungültig",
-            400
-        )
+        return redirect(request.referrer or "/strobes")
 
     return redirect(
         request.referrer or "/strobes"
