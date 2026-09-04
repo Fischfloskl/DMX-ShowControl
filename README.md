@@ -69,7 +69,7 @@ A standalone Windows `.exe` release is available through the **GitHub Releases**
 
 The standalone version includes the required Python runtime and dependencies, so **Python does not need to be installed separately.**
 
-**However, serial communication does not currently work with the current `.exe`.**
+> **However, serial communication does not currently work with the current `.exe`.**
 
 ---
 
