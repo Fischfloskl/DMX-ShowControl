@@ -7,6 +7,7 @@ from reference_checker import ReferenceChecker
 from sequence_manager import SequenceManager
 import sys
 from pathlib import Path
+import webbrowser
 
 LOG = Path(sys.executable).resolve().parent / "startup.log"
 
@@ -38,17 +39,28 @@ checker = ReferenceChecker(
     strobe_manager
 )
 
-print("Verbinde Arduino...")
+print("connecting to Arduino...")
 
 WINDOW_TITLE = "DMX ShowControl"
 
-WINDOW_WIDTH = 1380
+WINDOW_WIDTH = 1460
 WINDOW_HEIGHT = 720
 
 if serial.connect():
-    print("Arduino verbunden")
+    print("Arduino connected")
 else:
-    print("Arduino NICHT verbunden")
+    print("Arduino not connected")
+
+
+
+class API:
+
+    def open_browser(self, url):
+
+        webbrowser.open_new_tab(url)
+
+        return True
+
 
 
 def serial_watchdog():
@@ -89,12 +101,14 @@ server_thread.start()
 # Kurz warten, damit Flask den Port öffnen kann
 time.sleep(1)
 
+api = API()
 
 webview.create_window(
     WINDOW_TITLE,
     f"http://127.0.0.1:{settings.port}",
     width=WINDOW_WIDTH,
-    height=WINDOW_HEIGHT
+    height=WINDOW_HEIGHT,
+    js_api=api
 )
 
 
@@ -104,7 +118,7 @@ try:
 
 finally:
 
-    print("DMX-ShowControl wird beendet...")
+    print("DMX-ShowControl is shutting down...")
     external_application_manager.stop_all()
 
 #os._exit(0)

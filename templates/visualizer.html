@@ -1,0 +1,859 @@
+{% if mode == "edit" %}{% extends "base.html" %}{% else %}{% extends "show_base.html" %}{% endif %}
+
+{% block content %}
+
+
+<style>
+
+    * {
+        box-sizing: border-box;
+    }
+
+
+    html,
+    body {
+
+        margin: 0;
+
+        width: 100%;
+        height: 100%;
+
+        overflow: hidden;
+
+        font-family: Arial, sans-serif;
+
+        background: #111;
+        color: #eee;
+    }
+    .page {
+
+        padding:0px;
+
+    }
+
+
+    #app {
+        width: 100%;
+        height: calc(100vh - 55px);
+
+        display: flex;
+
+        min-height: 0;
+    }
+
+
+    #sidebar {
+        width: 280px;
+        min-width: 280px;
+        height: 100%;
+        min-height: 0;
+
+        padding: 18px;
+
+        background: #1b1b1b;
+
+        border-right: 1px solid #333;
+
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+
+    #viewport {
+
+        position: relative;
+
+        flex: 1;
+
+        min-width: 0;
+    }
+
+
+    #scene {
+
+        width: 100%;
+        height: 100%;
+    }
+
+
+    /* =====================================================
+        TEXT
+        ===================================================== */
+
+    h1 {
+
+        margin: 0 0 18px;
+
+        font-size: 20px;
+    }
+
+
+    h2 {
+
+        margin: 22px 0 10px;
+
+        font-size: 14px;
+
+        color: #aaa;
+
+        text-transform: uppercase;
+    }
+
+
+    h3 {
+
+        margin: 15px 0 8px;
+
+        font-size: 14px;
+
+        color: #aaa;
+    }
+
+
+    /* =====================================================
+        BUTTONS
+        ===================================================== */
+
+    button {
+
+        width: 100%;
+
+        padding: 10px;
+
+        margin-bottom: 8px;
+
+        border: 1px solid #444;
+
+        border-radius: 6px;
+
+        background: #292929;
+
+        color: white;
+
+        cursor: pointer;
+    }
+
+
+    button:hover {
+
+        background: #383838;
+    }
+
+
+    #hint a {
+        color: #bbb;
+        font-weight: 700;        
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    #hint a:hover {
+        color: #fff;
+        font-weight: 700;
+        text-decoration: underline;
+    }
+
+    /* =====================================================
+        FIXTURE LIST
+        ===================================================== */
+
+    .fixture {
+
+        padding: 9px;
+
+        margin-bottom: 5px;
+
+        border-radius: 5px;
+
+        background: #252525;
+
+        cursor: pointer;
+    }
+
+
+    .fixture:hover {
+
+        background: #333;
+    }
+
+
+    .fixture.selected {
+
+        outline: 2px solid #777;
+
+        background: #383838;
+    }
+
+
+    /* =====================================================
+        LABELS
+        ===================================================== */
+
+    label {
+
+        display: block;
+
+        margin: 10px 0 4px;
+
+        font-size: 13px;
+
+        color: #bbb;
+    }
+
+
+    input[type="range"] {
+        width: 100%;   
+    }
+
+
+    input[type="color"] {
+
+        width: 100%;
+        height: 50px;
+
+        border: none;
+
+        background: none;
+
+        cursor: pointer;
+    }
+
+
+    .value {
+
+        float: right;
+
+        color: white;
+    }
+
+
+    /* =====================================================
+        POSITION DISPLAY
+        ===================================================== */
+
+    .position-display {
+
+        display: flex;
+
+        gap: 8px;
+
+        margin-top: 8px;
+    }
+
+
+    .position-value {
+
+        flex: 1;
+
+        padding: 9px;
+
+        border-radius: 5px;
+
+        background: #252525;
+
+        text-align: center;
+
+        font-size: 13px;
+    }
+
+
+    .position-value span {
+
+        display: block;
+
+        margin-top: 3px;
+
+        color: #fff;
+
+        font-size: 14px;
+    }
+
+
+    /* =====================================================
+        HINT
+        ===================================================== */
+
+    #hint {
+
+        position: absolute;
+
+        left: 15px;
+        bottom: 15px;
+
+        padding: 8px 11px;
+
+        border-radius: 5px;
+
+        background: rgba(0, 0, 0, 0.65);
+
+        font-size: 14px;
+
+        color: #bbb;
+
+    }
+    #desktopWarning {
+        position: fixed;
+
+        top: 55px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+
+        display: none;
+
+        align-items: center;
+        justify-content: center;
+
+        background: rgba(0, 0, 0, 0.92);
+
+        z-index: 9000;
+    }
+
+    .warning-box {
+        padding: 30px;
+        max-width: 420px;
+
+        text-align: center;
+
+        background: #1b1b1b;
+        border: 1px solid #444;
+        border-radius: 10px;
+    }
+
+    .warning-box h2 {
+        margin-top: 0;
+        color: #fff;
+    }
+
+    .warning-box p {
+        color: #aaa;
+    }
+    .position-value input {
+        display: block;
+
+        width: 100%;
+
+        margin-top: 5px;
+        padding: 6px;
+
+        border: 1px solid #444;
+        border-radius: 5px;
+
+        background: #1b1b1b;
+        color: #fff;
+
+        text-align: center;
+    }
+
+    .position-value input:focus {
+        outline: none;
+        border-color: #777;
+    }
+    #deviceSelect {
+        width: 100%;
+
+        padding: 9px;
+
+        margin-bottom: 8px;
+
+        border: 1px solid #444;
+        border-radius: 6px;
+
+        background: #292929;
+        color: #fff;
+    }
+
+
+    .device-assignment {
+        margin-top: 12px;
+
+        padding: 10px;
+
+        background: #252525;
+
+        border-radius: 6px;
+
+        border: 1px solid #333;
+    }
+
+
+    .device-header {
+        display: flex;
+
+        justify-content: space-between;
+        align-items: center;
+
+        margin-bottom: 10px;
+
+        font-size: 13px;
+    }
+
+
+    .device-header button {
+        width: auto;
+
+        padding: 4px 8px;
+
+        margin: 0;
+    }
+
+
+    .device-start-channel {
+        width: 100%;
+
+        padding: 7px;
+
+        margin-top: 4px;
+
+        border: 1px solid #444;
+        border-radius: 5px;
+
+        background: #1b1b1b;
+        color: #fff;
+    }
+
+
+    .device-channels {
+        margin-top: 10px;
+    }
+
+
+    .device-channel {
+        display: flex;
+
+        align-items: center;
+
+        gap: 6px;
+
+        margin-bottom: 4px;
+
+        font-size: 12px;
+    }
+
+
+    .device-channel-name {
+        flex: 1;
+
+        min-width: 0;
+
+        color: #aaa;
+    }
+
+
+    .device-channel-number {
+        width: 25px;
+
+        color: #777;
+
+        text-align: right;
+    }
+
+
+    .device-channel input {
+        width: 65px;
+
+        padding: 5px;
+
+        border: 1px solid #444;
+        border-radius: 4px;
+
+        background: #1b1b1b;
+        color: #fff;
+
+        text-align: right;
+    }
+
+</style>
+
+<body>
+
+
+<div id="app">
+
+    <div id="desktopWarning">
+        <div class="warning-box">
+            <h2>Please use a desktop device.</h2>
+            <p>
+                The 3D Visualizer is designed for desktop computers.
+            </p>
+        </div>
+    </div>
+    <!-- =====================================================
+         SIDEBAR
+         ===================================================== -->
+
+    <aside id="sidebar">
+
+
+        <h1>
+            3D Visualizer
+        </h1>
+
+
+        <button id="addFixture">
+            + place Moving Head
+        </button>
+
+        <button id="addTruss">+ place truss</button>
+
+        <button id="deleteFixture">
+            Delete
+        </button>
+
+        <button id="copySettings">
+            Copy Settings
+        </button>
+
+        <button id="pasteSettings">
+            Paste Settings
+        </button>
+
+        <button id="saveProject">Save</button>
+
+        <!-- =================================================
+             FIXTURES
+             ================================================= -->
+
+        <h2>
+            Fixtures
+        </h2>
+
+
+        <div id="fixtureList"></div>
+
+
+        <!-- =================================================
+             POSITION
+             ================================================= -->
+
+        <h2>
+            Position
+        </h2>
+
+
+        <div class="position-display">
+
+            <div class="position-value">
+                X
+
+                <input
+                    id="xInput"
+                    type="number"
+                    step="0.01"
+                    value="0.00"
+                >
+            </div>
+
+            <div class="position-value">
+                Y
+
+                <input
+                    id="yInput"
+                    type="number"
+                    step="0.01"
+                    value="0.00"
+                >
+            </div>
+
+            <div class="position-value">
+                Z
+
+                <input
+                    id="zInput"
+                    type="number"
+                    step="0.01"
+                    value="0.00"
+                >
+            </div>
+
+        </div>
+        <br>
+        <br>
+
+        <!-- =================================================
+             MOVEMENT
+             ================================================= -->
+
+        <h2>
+            Movement
+        </h2>
+
+
+        <label>
+
+            Pan
+
+            <span
+                class="value"
+                id="panValue"
+            >
+                0°
+            </span>
+
+        </label>
+
+
+        <input
+            id="pan"
+            type="range"
+            min="0"
+            max="450"
+            step="1"
+            value="0"
+        >
+
+
+        <label>
+
+            Tilt
+
+            <span
+                class="value"
+                id="tiltValue"
+            >
+                0°
+            </span>
+
+        </label>
+
+
+        <input
+            id="tilt"
+            type="range"
+            min="0"
+            max="360"
+            step="1"
+            value="0"
+        >
+
+
+        <!-- =================================================
+             LIGHT
+             ================================================= -->
+
+        <h2>
+            Light
+        </h2>
+
+
+        <label>
+            Color
+        </label>
+
+
+        <input
+            id="color"
+            type="color"
+            value="#ffffff"
+        >
+
+
+        <label>
+
+            Brightness (Master)
+
+            <span
+                class="value"
+                id="intensityValue"
+            >
+                255
+            </span>
+
+        </label>
+
+
+        <input
+            id="intensity"
+            type="range"
+            min="0"
+            max="255"
+            step="1"
+            value="255"
+        >
+
+
+        <label>
+
+            Beam Angle
+
+            <span
+                class="value"
+                id="angleValue"
+            >
+                20°
+            </span>
+
+        </label>
+
+
+        <input
+            id="beamAngle"
+            type="range"
+            min="1"
+            max="60"
+            step="1"
+            value="20"
+        >
+        <!-- =================================================
+        DMX / DEVICES
+        ================================================= -->
+
+        <h2>
+            DMX / Devices
+        </h2>
+
+        <select id="deviceSelect">
+
+            <option value="">
+                Select Device...
+            </option>
+
+            {% for device in devices %}
+
+                <option value="{{ device.id }}">
+                    {{ device.name }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <button id="addDevice">
+            + Add Device
+        </button>
+
+        <div id="deviceAssignments"></div>
+
+        <!-- =================================================
+        GLOBAL BEAM
+        ================================================= -->
+
+        <h2>
+            Global settings
+        </h2>
+
+
+        <label>
+
+            Lenght
+
+            <span
+                class="value"
+                id="globalBeamLengthValue"
+            >
+                45 m
+            </span>
+
+        </label>
+
+
+        <input
+            type="range"
+            id="globalBeamLength"
+            min="1"
+            max="180"
+            step="1"
+            value="45"
+        >
+
+
+        <button id="globalBeamToggle">
+            Beam ON
+        </button>
+
+
+        <!-- =================================================
+             UNIVERSE
+             ================================================= -->
+
+        <h2>
+            Universe
+        </h2>
+
+        <label>
+            Size
+            <span
+                class="value"
+                id="universeSizeValue"
+            >
+                30 m
+            </span>
+        </label>
+
+        <input
+            type="range"
+            id="universeSize"
+            min="5"
+            max="150"
+            step="1"
+            value="30"
+        >
+
+
+    </aside>
+
+
+    <!-- =====================================================
+         3D VIEW
+         ===================================================== -->
+    
+    <main id="viewport">
+
+        <div id="scene"></div>
+
+        <div id="hint">
+
+            <a href="#" id="hintTranslate">G: Positioning</a>
+            ·
+            <a href="#" id="hintScale">T: Scale</a>
+            ·
+            <a href="#" id="hintDeselect">S: Deselect</a>
+            ·
+            <a href="#" id="hintRotate">R: Rotate</a>
+            ·
+            <a id="saveProject">Ctrl + S: Save</a>
+            ·
+            Right-click and drag: Camera
+
+        </div>
+        
+    </main>
+
+
+</div>
+
+
+<!-- =========================================================
+     THREE.JS IMPORTMAP
+     ========================================================= -->
+
+<script type="importmap">
+
+{
+    "imports": {
+
+        "three":
+            "/static/js/three.module.js",
+
+        "three/addons/":
+            "/static/js/addons/"
+
+    }
+}
+
+</script>
+
+<script>
+    const initialProject = {{ project | tojson }};
+    const availableDevices = {{ devices | tojson }};
+</script>
+
+<script
+    type="module"
+    src="{{ url_for('static', filename='js/main.js') }}"
+></script>
+
+
+</body>
+
+{% endblock %}

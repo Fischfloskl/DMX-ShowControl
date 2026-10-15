@@ -85,6 +85,41 @@ class DMXManager:
             "S;" + ";".join(parts)
         )
 
+    
+    def set_scene(self, scene):
+        print("APPLY SCENE")
+
+        # Alle DMX-Kanäle auf 0 setzen
+        values = {
+            ch: 0
+            for ch in range(1, 512)
+        }
+
+        for device_id, channels in scene["devices"].items():
+            device = devices.get_id(int(device_id))
+
+            if not device:
+                continue
+
+            start = device["start_channel"]
+
+            for ch, value in channels.items():
+                dmx_channel = start + int(ch) - 1
+
+                if dmx_channel in values:
+                    values[dmx_channel] = int(value)
+
+        # Vollständigen Zustand übernehmen
+        self.current = values
+
+        parts = [
+            f"{ch}:{values[ch]}"
+            for ch in sorted(values)
+        ]
+
+        return self.send("S;" + ";".join(parts))
+
+
 
 
     def send(self, command):

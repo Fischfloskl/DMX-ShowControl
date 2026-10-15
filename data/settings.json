@@ -9,8 +9,8 @@
         "mode": "edit",
         "timing-global-record": "r",
         "timing-global-sim": "mediaplaypause",
-        "timing-live": "f3",
-        "timing-mode": "global",
+        "timing-live": "arrowup",
+        "timing-mode": "live",
         "external_applications": [
             {
                 "path": "C:\\Program Files (x86)\\Tobias Erichsen\\loopMIDI\\loopMIDI.exe",

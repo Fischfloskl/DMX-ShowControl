@@ -21,6 +21,7 @@ from external_application_manager import ExternalApplicationManager
 
 import re
 import os
+import json
 import threading
 import time
 
@@ -186,6 +187,120 @@ watcher = DataWatcher("data")
 watcher.start()
 
 
+# ============================================================
+# PROJEKTDATEI - temporär
+# ============================================================
+
+PROJECT_FILE = "data/3d-data.json"
+
+
+# ============================================================
+# STANDARD-PROJEKT
+# ============================================================
+
+DEFAULT_PROJECT = {
+    "universeSize": 30,
+    "globalBeamLength": 5,
+    "globalBeamsVisible": True,
+    "fixtures": [],
+    "trusses": []
+}
+
+
+# ============================================================
+# PROJEKT LADEN
+# ============================================================
+
+def load_project():
+
+    if not os.path.exists(PROJECT_FILE):
+        return DEFAULT_PROJECT.copy()
+
+    try:
+
+        with open(
+            PROJECT_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            return json.load(file)
+
+    except Exception as error:
+
+        print(
+            "Error while loading project:",
+            error
+        )
+
+        return DEFAULT_PROJECT.copy()
+
+
+# ============================================================
+# PROJEKT SPEICHERN
+# ============================================================
+
+def save_project(project):
+
+    with open(
+        PROJECT_FILE,
+        "w",
+        encoding="utf-8"
+    ) as file:
+
+        json.dump(
+            project,
+            file,
+            indent=4,
+            ensure_ascii=False
+        )
+
+# ============================================================
+# PROJEKT SPEICHERN
+# ============================================================
+
+@app.route(
+    "/api/project/save",
+    methods=["POST"]
+)
+def save_project_api():
+
+    project = request.get_json()
+
+    if not project:
+
+        return jsonify({
+            "success": False,
+            "error": "No project data received."
+        }), 400
+
+
+    try:
+
+        save_project(
+            project
+        )
+
+        return jsonify({
+            "success": True
+        })
+
+
+    except Exception as error:
+
+        print(
+            "Error while saving:",
+            error
+        )
+
+        return jsonify({
+            "success": False,
+            "error": str(error)
+        }), 500
+
+
+
+
 # ----------------------------
 # Seiten
 # ----------------------------
@@ -211,6 +326,18 @@ def inject_mode():
         "mode": settings.get("mode"),
         "problems":reference_checker.check()
     }
+
+
+@app.route("/visualizer")
+def visualizer():
+    project = load_project()
+    return render_template(
+        "visualizer.html",
+        mode="edit",
+        project=project,
+        devices=devices.devices
+    )
+
 
 @app.route("/timing")
 def timing():
@@ -245,7 +372,7 @@ def timing():
 def timing_reset():
 
     trigger_engine.reset_timing()
-    print("reset der Trigger-zeitmessung")
+    print("Reset the trigger-timing")
 
     return {
         "success": True
@@ -325,18 +452,21 @@ def timing_save_global_sim():
 def set_mode(mode):
 
     if mode not in ["show", "edit"]:
-        return "Ungültiger Modus", 400
+        return "Invalid Mode", 400
 
     settings.set(
         "mode",
         mode
     )
+    print(mode)
 
     
-    if "/show" in request.referrer:
-        return redirect('/')
+    
 
     settings.save()
+
+    if "/show" in request.referrer:
+        return redirect('/')
 
     return redirect(request.referrer or '/')
 
@@ -405,7 +535,7 @@ def delete_fade():
     )
 
     if not fade:
-        return "Fade nicht gefunden", 404
+        return "Fade not found", 404
 
 
     fade_manager.fades.remove(
@@ -431,7 +561,7 @@ def duplicate_fade():
     )
 
     if not fade:
-        return "Fade nicht gefunden", 404
+        return "Fade not found", 404
 
     return redirect(
         request.referrer or "/fades"
@@ -475,7 +605,7 @@ def edit_fade():
 
 
     if not fade:
-        return "Fade nicht gefunden",404
+        return "Fade not found",404
 
 
     print("FADE:")
@@ -510,7 +640,7 @@ def add_device_to_fade():
 
 
     if not fade:
-        return "Fade nicht gefunden",404
+        return "Fade not found",404
 
 
     if "devices" not in fade:
@@ -563,7 +693,7 @@ def edit_fade_device():
 
 
     if not fade or not device:
-        return "Nicht gefunden",404
+        return "not found",404
 
 
 
@@ -632,7 +762,7 @@ def save_fade_device():
 
 
     if not fade:
-        return "Fade nicht gefunden",404
+        return "Fade not found",404
 
     fade["mode"] = request.form.get(
         "mode",
@@ -725,7 +855,7 @@ def start_fade():
     )
 
     if not fade:
-        return "Fade nicht gefunden", 404
+        return "Fade not found", 404
 
     fade_engine.play(fade)
 
@@ -893,7 +1023,7 @@ def edit_scene():
 
     if not scene:
 
-        return "Szene nicht gefunden",404
+        return "Scene not found",404
 
 
 
@@ -916,14 +1046,14 @@ def duplicate_scene():
     )
 
     if not scene:
-        return "Szene nicht gefunden", 404
+        return "Scene not found", 404
 
     return redirect(
         request.referrer or "/scenes"
     )
 
 # --------------------------------
-# Gerät zu Szene hinzufügen
+# device zu Scene hinzufügen
 # --------------------------------
 
 
@@ -937,7 +1067,7 @@ def add_device_to_scene():
     scene = scene_manager.get_id(scene_id)
 
     if not scene:
-        return "Szene nicht gefunden",404
+        return "Scene not found",404
 
 
 
@@ -962,7 +1092,7 @@ def add_device_to_scene():
 
 
 # --------------------------------
-# Gerät entfernen
+# device entfernen
 # --------------------------------
 
 
@@ -986,7 +1116,7 @@ def remove_device_from_scene():
 
     if not scene:
 
-        return "Szene nicht gefunden",404
+        return "Scene not found",404
 
 
 
@@ -1006,7 +1136,7 @@ def remove_device_from_scene():
 
 
 # --------------------------------
-# Gerät bearbeiten
+# device bearbeiten
 # --------------------------------
 
 
@@ -1025,14 +1155,14 @@ def edit_scene_device():
     scene = scene_manager.get_id(scene_id)
 
     if not scene:
-        return "Szene nicht gefunden",404
+        return "Scene not found",404
 
 
 
     device = devices.get_id(device_id)
 
     if not device:
-        return "Gerät nicht gefunden",404
+        return "device not found",404
 
 
 
@@ -1083,7 +1213,7 @@ def save_scene_device():
     scene = scene_manager.get_id(scene_id)
 
     if not scene:
-        return "Szene nicht gefunden",404
+        return "Scene not found",404
 
 
 
@@ -1119,7 +1249,7 @@ def save_scene_device():
     if channels:
         scene["devices"][str(device_id)] = channels
     else:
-        print("Keine Kanäle empfangen - nichts gespeichert")
+        print("No channels received—nothing saved")
 
 
 
@@ -1134,7 +1264,7 @@ def save_scene_device():
 
 
 # --------------------------------
-# Szene allgemein speichern
+# Scene allgemein speichern
 # --------------------------------
 
 
@@ -1154,7 +1284,7 @@ def save_scene():
 
     if not scene:
 
-        return "Szene nicht gefunden",404
+        return "Scene not found",404
 
 
 
@@ -1172,7 +1302,7 @@ def save_scene():
 
 
 # --------------------------------
-# Szene löschen
+# Scene löschen
 # --------------------------------
 
 
@@ -1246,7 +1376,7 @@ def edit_trigger():
 
     if not trigger:
 
-        return "Trigger nicht gefunden",404
+        return "Trigger not found",404
 
 
 
@@ -1398,7 +1528,7 @@ def duplicate_trigger():
     )
 
     if not trigger:
-        return "Trigger nicht gefunden", 404
+        return "Trigger not found", 404
 
     return redirect(
         request.referrer or "/triggers"
@@ -1435,7 +1565,7 @@ def execute_trigger():
     )
 
     if not trigger:
-        return "Trigger nicht gefunden", 404
+        return "Trigger not found", 404
 
     trigger_engine.execute(trigger)
 
@@ -1465,7 +1595,7 @@ def duplicate_device():
     )
 
     if not device:
-        return "Gerät nicht gefunden", 404
+        return "device not found", 404
 
     return redirect(
         request.referrer or "/devices"
@@ -1497,7 +1627,7 @@ def delete_device():
         request.args.get("id")
     )
 
-    print("Lösche Gerät:", device_id)
+    print("Lösche device:", device_id)
     devices.delete(
         device_id
     )
@@ -1524,7 +1654,7 @@ def edit_device():
 
     if device is None:
 
-        return "Gerät nicht gefunden", 404
+        return "device not found", 404
 
 
     return render_template(
@@ -1609,8 +1739,8 @@ def settings_page():
         port = settings.port
     )
 
-@app.route("/settings/export")
-def export_show():
+@app.route("/settings/export_old")
+def export_show_old():
 
 
     items = request.args.getlist(
@@ -1644,6 +1774,115 @@ def export_show():
 
 
     return response
+
+
+@app.route("/settings/export")
+def export_show():
+
+    items = request.args.getlist(
+        "items"
+    )
+
+
+    content = export_manager.create_export(
+        items
+    )
+
+
+    # --------------------------------------------------
+    # Filename
+    # --------------------------------------------------
+
+    if "all" in items:
+
+        filename = "ShowControl_Everything.dmx"
+
+
+    elif len(items) == 1:
+
+        names = {
+            "scenes": "Scenes",
+            "fades": "Fades",
+            "sequences": "Sequences",
+            "triggers": "Triggers",
+            "devices": "Devices"
+        }
+
+        filename = (
+            "ShowControl_"
+            + names.get(
+                items[0],
+                "Export"
+            )
+            + ".dmx"
+        )
+
+
+    else:
+
+        names = {
+            "scenes": "Scenes",
+            "fades": "Fades",
+            "sequences": "Sequences",
+            "triggers": "Triggers",
+            "devices": "Devices"
+        }
+
+
+        selected_names = [
+            names.get(
+                item,
+                item
+            )
+            for item in items
+        ]
+
+
+        filename = (
+            "ShowControl_"
+            + "_".join(
+                selected_names
+            )
+            + ".dmx"
+        )
+
+
+    # --------------------------------------------------
+    # Response
+    # --------------------------------------------------
+
+    response = make_response(
+        content
+    )
+
+
+    response.headers[
+        "Content-Disposition"
+    ] = (
+        "attachment; "
+        f"filename={filename}"
+    )
+
+
+    response.headers[
+        "Content-Type"
+    ] = "application/octet-stream"
+
+
+    return response
+
+
+@app.route("/live-faders")
+def live_faders():
+    project = load_project()
+
+    return render_template(
+        "live_faders.html",
+        mode="edit",
+        project=project,
+        devices=devices.devices
+    )
+
 
 
 @app.route(
@@ -1820,7 +2059,7 @@ def duplicate_sequence():
     )
 
     if not sequence:
-        return "Sequenz nicht gefunden", 404
+        return "Sequence not found", 404
 
     return redirect(
         request.referrer or "/sequences"
@@ -1857,7 +2096,7 @@ def add_sequence():
         sequence_manager.get_next_id(),
 
         "name":
-        "Neue Sequenz",
+        "Neue Sequence",
 
         "steps":[]
 
@@ -1901,7 +2140,7 @@ def edit_sequence():
 
 
     if not sequence:
-        return "Sequenz nicht gefunden",404
+        return "Sequence not found",404
 
 
     return render_template(
@@ -2111,6 +2350,56 @@ def client_connected(auth=None):
             "handshake": serial.handshake
         }
     )
+
+
+
+@app.route("/api/dmx/live-values", methods=["POST"])
+def api_dmx_live_values():
+    data = request.get_json(silent=True) or {}
+    raw_values = data.get("values", {})
+
+    if not isinstance(raw_values, dict):
+        return jsonify(
+            success=False,
+            error="Invalid channel values"
+        ), 400
+
+    values = {}
+
+    try:
+        for raw_channel, raw_value in raw_values.items():
+            channel = int(raw_channel)
+            value = int(raw_value)
+
+            if not 1 <= channel <= 512:
+                return jsonify(
+                    success=False,
+                    error=f"Invalid DMX channel: {channel}"
+                ), 400
+
+            if not 0 <= value <= 255:
+                return jsonify(
+                    success=False,
+                    error=f"Invalid DMX value: {value}"
+                ), 400
+
+            values[channel] = value
+
+    except (TypeError, ValueError):
+        return jsonify(
+            success=False,
+            error="Channel and value must be integers"
+        ), 400
+
+    if values:
+        dmx_manager.apply_values(values)
+
+    return jsonify(
+        success=True,
+        count=len(values)
+    )
+
+
 
 
 @app.route("/show")
@@ -2416,7 +2705,7 @@ def delete_strobe():
     ):
 
         return (
-            "Strobe nicht gefunden",
+            "Strobe not found",
             404
         )
 
@@ -2443,7 +2732,7 @@ def duplicate_strobe():
     if not strobe:
 
         return (
-            "Strobe nicht gefunden",
+            "Strobe not found",
             404
         )
 
@@ -2466,7 +2755,7 @@ def start_strobe():
     )
 
     if not strobe:
-        return "Strobe nicht gefunden", 404
+        return "Strobe not found", 404
 
     strobe_manager.start(
         strobe

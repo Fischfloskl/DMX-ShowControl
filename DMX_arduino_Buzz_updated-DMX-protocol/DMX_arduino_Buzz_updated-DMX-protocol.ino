@@ -107,7 +107,7 @@ void loop() {
       s.trim();
 
 
-      if(s == "1"){
+      if(s == "1" || s.startsWith("E")){
 
         connected = true;
         lastSerial = millis();

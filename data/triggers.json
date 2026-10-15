@@ -7,13 +7,22 @@
             "actions": [
                 {
                     "type": "scene",
-                    "target": "1"
-                },
+                    "target": "reset"
+                }
+            ],
+            "name": "reset",
+            "enabled": true,
+            "type": "keyboard",
+            "keys": [
+                "escape"
+            ]
+        },
+        {
+            "id": 2,
+            "actions": [
                 {
-                    "type": "keyboard",
-                    "keys": [
-                        "mediaplaypause"
-                    ]
+                    "type": "scene",
+                    "target": "pos1"
                 }
             ],
             "name": "1",
@@ -21,6 +30,21 @@
             "type": "keyboard",
             "keys": [
                 "1"
+            ]
+        },
+        {
+            "id": 3,
+            "actions": [
+                {
+                    "type": "scene",
+                    "target": "pos2"
+                }
+            ],
+            "name": "2",
+            "enabled": true,
+            "type": "keyboard",
+            "keys": [
+                "2"
             ]
         }
     ]

@@ -121,6 +121,36 @@ body {
 }
 
 
+.navbar,
+.navbar * {
+    position: relative;
+    z-index: 10000;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{
+    scrollbar-width: thin;
+    scrollbar-color: #777 #1b1b1b;
+}
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1b1b1b;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+    
+
+
 /* ---------- Fader ---------- */
 
 input[type="range"]{
@@ -1237,11 +1267,11 @@ td {
 }
 
 /* ---------------------------------
-   MOBILE
+   MOBILE - wird in den bases überschrieben
 ---------------------------------- */
 
 
-@media(max-width:950px){
+/*@media(max-width: 1430px){
 
 
     .navbar {

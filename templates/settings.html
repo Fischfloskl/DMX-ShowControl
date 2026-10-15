@@ -510,90 +510,101 @@ document
 
 function exportDMX(){
 
+    let select =
+        document.getElementById(
+            "exportSelect"
+        );
 
-let select =
-document.getElementById(
-"exportSelect"
-);
-
-
-let values=[];
+    let values = [];
 
 
+    for(let option of select.options){
 
-for(let option of select.options){
+        if(option.selected){
+
+            values.push(
+                option.value
+            );
+
+        }
+
+    }
 
 
-if(option.selected){
+    if(values.length === 0){
 
-values.push(
-option.value
-);
+        alert(
+            "Please select at least one category"
+        );
+
+        return;
+
+    }
+
+
+    if(values.includes("all")){
+
+        values = [
+            "scenes",
+            "fades",
+            "sequences",
+            "triggers",
+            "devices"
+        ];
+
+    }
+
+
+    let url =
+        "/settings/export?";
+
+
+    values.forEach(
+        item => {
+
+            url +=
+                "items="
+                +
+                encodeURIComponent(item)
+                +
+                "&";
+
+        }
+    );
+
+
+    /*
+     * PyWebView
+     *
+     * In PyWebView wird der Download nicht wie
+     * in einem normalen Browser behandelt.
+     *
+     * Deshalb öffnen wir die Export-URL
+     * über Python im Standardbrowser.
+     */
+
+    if(
+        window.pywebview &&
+        window.pywebview.api &&
+        window.pywebview.api.open_browser
+    ){
+
+        window.pywebview.api.open_browser(
+            window.location.origin + url
+        );
+
+        return;
+
+    }
+
+
+    /*
+     * Normaler Browser
+     */
+
+    window.location.href = url;
 
 }
-
-}
-
-
-
-if(values.length === 0){
-
-alert(
-"Please select at least one category"
-);
-
-return;
-
-}
-
-
-
-
-if(values.includes("all")){
-
-
-values=[
-
-"scenes",
-"fades",
-"sequences",
-"triggers",
-"devices"
-
-];
-
-
-}
-
-
-
-let url =
-"/settings/export?";
-
-
-
-values.forEach(
-item=>{
-
-
-url +=
-"items="
-+
-item
-+
-"&";
-
-
-}
-);
-
-
-
-window.location.href=url;
-
-
-}
-
 
 </script>
 <script>

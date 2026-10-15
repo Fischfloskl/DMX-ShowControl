@@ -1,0 +1,355 @@
+{% extends "show_base.html" if mode == "show" else "base.html" %}
+
+{% block title %}Live Faders – DMXShowControl{% endblock %}
+
+{% block content %}
+<div class="lf-page">
+    <header class="lf-header">
+        <div>
+            <h1>Live Faders</h1>
+            <p class="lf-subtitle">Direkte DMX-Steuerung deiner Geräte</p>
+        </div>
+
+        <div class="lf-controls">
+            <button id="lf-live" class="lf-button lf-live">
+                Live aktivieren
+            </button>
+            <button id="lf-blackout" class="lf-button lf-blackout" disabled>
+                Blackout
+            </button>
+        </div>
+    </header>
+
+    <div id="lf-status" class="lf-status" role="status">
+        Live-Ausgabe deaktiviert
+    </div>
+
+    <div id="lf-device-tabs" class="lf-device-tabs"></div>
+
+    <div id="lf-devices" class="lf-devices">
+        <p class="lf-loading">Geräte werden geladen …</p>
+    </div>
+</div>
+
+<style>
+/* Befreiter, nativer vertikaler Slider isoliert von globalen CSS-Regeln */
+.lf-slider {
+    all: unset; /* Löscht JEDES globale CSS (Hintergründe, Rahmen, Abstände etc.) */
+    display: inline-block; /* Stellt sicher, dass Breiten/Höhen greifen */
+    
+    appearance: auto !important; /* Zwingt den Browser zum Standard-Design */
+    -webkit-appearance: slider-vertical !important; /* Wichtig für Chrome/Safari, um das native Design zu erzwingen */
+
+    height: 350px !important; /* Deine gewünschte Höhe */
+    width: 30px !important;   /* Breite der Klickzone */
+    margin: 0 auto !important;
+    cursor: pointer !important;
+}
+
+.lf-page {
+    width: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+    color: var(--body-color, inherit);
+}
+
+.lf-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.lf-header h1 {
+    margin: 0 0 5px;
+}
+
+.lf-subtitle {
+    margin: 0;
+    opacity: .7;
+}
+
+.lf-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.lf-button {
+    border: 0;
+    border-radius: 8px;
+    padding: 12px 18px;
+    font-weight: 700;
+    cursor: pointer;
+    min-height: 44px;
+}
+
+.lf-button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.lf-live {
+    background: #287d46;
+    color: white;
+}
+
+.lf-live.is-active {
+    background: #b3261e;
+}
+
+.lf-blackout {
+    background: #252525;
+    color: white;
+}
+
+.lf-status {
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    border-radius: 7px;
+    background: rgba(128, 128, 128, .12);
+}
+
+.lf-status.is-active {
+    border-left: 4px solid #287d46;
+}
+
+.lf-status.is-error {
+    border-left: 4px solid #b3261e;
+}
+
+.lf-device-tabs {
+    display: none;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 2px 0 12px;
+    margin-bottom: 8px;
+}
+
+.lf-tab {
+    flex: 0 0 auto;
+    border: 1px solid rgba(128, 128, 128, .4);
+    border-radius: 8px;
+    padding: 10px 14px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.lf-tab.is-selected {
+    background: #287d46;
+    color: white;
+    border-color: #287d46;
+}
+
+.lf-devices {
+    display: flex;
+    align-items: stretch;
+    gap: 14px;
+    overflow-x: auto;
+    padding-bottom: 16px;
+}
+
+.lf-device {
+    flex: 0 0 240px;
+    min-width: 0;
+    border: 1px solid rgba(128, 128, 128, .35);
+    border-radius: 12px;
+    padding: 14px;
+    box-sizing: border-box;
+    background: rgba(128, 128, 128, .045);
+}
+
+.lf-device-header {
+    margin-bottom: 12px;
+}
+
+.lf-device-header h2 {
+    font-size: 1.05rem;
+    margin: 0 0 8px;
+    overflow-wrap: anywhere;
+}
+
+.lf-address {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .9rem;
+}
+
+.lf-address input {
+    width: 78px;
+    min-width: 0;
+    padding: 7px;
+    border: 1px solid #999;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+}
+
+.lf-faders {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    align-items: stretch;
+    padding: 8px 0;
+}
+
+.lf-fader {
+    flex: 0 0 82px;
+    min-width: 82px;
+    max-width: 100px;
+    text-align: center;
+    padding: 10px 6px;
+    border-radius: 10px;
+    background: rgba(128, 128, 128, .09);
+    box-sizing: border-box;
+}
+
+.lf-fader-label {
+    display: block;
+    min-height: 2.5em;
+    font-size: .85rem;
+    overflow-wrap: anywhere;
+    margin-bottom: 10px;
+}
+
+/* Neuer, sauberer Container für den nativen vertikalen Slider */
+.lf-slider-wrap {
+    height: 360px; /* Bietet genug Platz für die 350px Höhe */
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Befreiter, nativer vertikaler Slider */
+.lf-slider {
+    height: 350px; /* Hier stellst du die gewünschte Höhe ein */
+    width: 30px;   /* Breite der Klickzone */
+    margin: 0 auto;
+    cursor: pointer;
+}
+
+.lf-value {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 10px;
+    padding: 8px 2px;
+
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+
+    border: 1px solid rgba(128, 128, 128, .4);
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+}
+
+.lf-loading {
+    opacity: .7;
+}
+
+@media (max-width: 760px) {
+    .lf-page {
+        padding: 12px;
+    }
+
+    .lf-header {
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    .lf-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .lf-button {
+        padding: 12px 8px;
+    }
+
+    .lf-device-tabs {
+        display: flex;
+    }
+
+    .lf-devices {
+        display: block;
+        overflow: visible;
+    }
+
+    .lf-device {
+        display: none;
+        width: 100%;
+        min-width: 0;
+        padding: 12px;
+    }
+
+    .lf-device.is-selected {
+        display: block;
+    }
+
+    .lf-faders {
+        justify-content: flex-start;
+        gap: 8px;
+    }
+
+    .lf-fader {
+        flex: 1 0 44px;
+        max-width: none;
+        min-width: 44px;
+        width: 200px;
+    }
+}
+
+@media (max-width: 760px) and (orientation: landscape) {
+    .lf-header {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .lf-device {
+        padding: 10px;
+    }
+
+    .lf-faders {
+        gap: 5px;
+    }
+}
+</style>
+
+<script>
+window.LIVE_FADERS_CONFIG = {
+    devices: {{ devices | tojson }},
+    endpoint: "/api/dmx/live-values"
+};
+
+// Da die Slider dynamisch per JavaScript aus der 'live_faders.js' erzeugt werden,
+// zwingen wir sie hier direkt nach dem Laden dazu, sich vertikal auszurichten.
+document.addEventListener("DOMContentLoaded", () => {
+    const observer = new MutationObserver(() => {
+        const sliders = document.querySelectorAll('.lf-slider');
+        sliders.forEach(slider => {
+            if (!slider.hasAttribute('orient')) {
+                slider.setAttribute('orient', 'vertical'); // Für Firefox/Standard
+                slider.style.writingMode = 'vertical-lr';  /* Für Chrome/Safari/Edge */
+                slider.style.direction = 'rtl';            /* Sorgt dafür, dass 0 unten und 255 oben ist */
+            }
+        });
+    });
+
+    // Beobachtet den Container, da die Geräte per API/JS nachgeladen werden
+    const devicesContainer = document.getElementById('lf-devices');
+    if (devicesContainer) {
+        observer.observe(devicesContainer, { childList: true, subtree: true });
+    }
+});
+</script>
+
+<script src="{{ url_for('static', filename='js/live_faders.js') }}"></script>
+{% endblock %}
