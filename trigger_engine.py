@@ -202,6 +202,11 @@ class TriggerEngine:
 
 
 
+    def set_audio_sequence_callbacks(self, start_callback, stop_callback):
+        self.audio_sequence_start = start_callback
+        self.audio_sequence_stop = stop_callback
+
+
 
     def execute(self, trigger):
 
@@ -388,6 +393,56 @@ class TriggerEngine:
                     "space": "space"
                 }
 
+            # -------------------
+            # Audio-Sequenz START
+            # -------------------
+
+            if action_type == "audio_start":
+                target = str(action.get("target", "")).strip()
+
+                if not target:
+                    print("Audio-Start: Kein Sequenzname angegeben.")
+                    continue
+
+                callback = getattr(
+                    self, "audio_sequence_start", None
+                )
+
+                if callback is None:
+                    print("Audio-Start: Controller nicht verbunden.")
+                    continue
+
+                try:
+                    print("Audio-Sequenz starten:", target)
+                    callback(target)
+
+                except Exception as exc:
+                    print(f"Audio-Sequenz konnte nicht starten: {exc}")
+
+                continue
+
+            # -------------------
+            # Audio-Sequenz STOP
+            # -------------------
+
+            if action_type == "audio_stop":
+                callback = getattr(
+                    self, "audio_sequence_stop", None
+                )
+
+                if callback is None:
+                    print("Audio-Stop: Controller nicht verbunden.")
+                    continue
+
+                try:
+                    print("Audio-Sequenz stoppen")
+                    callback()
+
+                except Exception as exc:
+                    print(f"Audio-Sequenz konnte nicht stoppen: {exc}")
+
+                continue
+
                 # Übersetze jede einzelne Taste aus der Liste
                 translated_keys = []
                 for key in keys:
@@ -542,3 +597,57 @@ class TriggerEngine:
             print(
                 f"Fehler bei Keyboard-Simulation: {e}"
             )
+
+    
+    def handle_midi_message(self, message):
+        """Verarbeitet eingehende MIDI-Nachrichten und löst Trigger aus."""
+
+        # MIDI-Trigger nur im Show-Modus ausführen
+        if self.settings.get("mode") != "show":
+            return
+
+        # Für Version 1 nur Note-On berücksichtigen
+        if message.type != "note_on":
+            return
+
+        # Note-On mit Velocity 0 gilt als Note-Off
+        if message.velocity <= 0:
+            return
+
+        note = int(message.note)
+        channel = int(message.channel)
+
+        for trigger in list(self.trigger_manager.triggers):
+
+            if not trigger.get("enabled", True):
+                continue
+
+            if trigger.get("type") != "midi":
+                continue
+
+            try:
+                trigger_note = int(trigger.get("input", -1))
+            except (TypeError, ValueError):
+                continue
+
+            # MIDI-Notennummer muss übereinstimmen
+            if trigger_note != note:
+                continue
+
+            # Optionaler Kanalfilter:
+            # Fehlt "channel", werden alle MIDI-Kanäle akzeptiert.
+            trigger_channel = trigger.get("channel")
+
+            if trigger_channel is not None:
+                try:
+                    if int(trigger_channel) != channel:
+                        continue
+                except (TypeError, ValueError):
+                    continue
+
+            print(
+                f"[MIDI] Trigger '{trigger.get('name')}' "
+                f"ausgelöst: Note {note}, Kanal {channel + 1}"
+            )
+
+            self.execute(trigger)

@@ -14,7 +14,19 @@ Settings
 
 <form method="post" action="/settings/save">
 
+<div class="card">
 
+
+<button
+class="btn-success"
+type="submit">
+
+Save
+
+</button>
+
+
+</div>
 
 <!-- Netzwerk -->
 
@@ -162,6 +174,116 @@ Lower values make fades smoother, but increase CPU usage.
 
 
 </div>
+
+
+
+<!-- MIDI Input -->
+
+<div class="card">
+
+    <h3>
+        🎹 MIDI Input
+    </h3>
+
+    <p style="color:#999;">
+        Select the MIDI input port used by DMXShowControl,
+        for example a virtual loopMIDI port connected to Ableton Live.
+    </p>
+
+    <div class="form-grid">
+
+        <div>
+            <label for="midi_input_port">
+                MIDI Input Port
+            </label>
+
+            <select
+                class="btna"
+                id="midi_input_port"
+                name="midi_input_port">
+
+                <option value="">
+                    -- No MIDI input --
+                </option>
+
+                {% for midi_port in midi_ports %}
+                <option
+                    value="{{ midi_port }}"
+                    {% if midi_input_port == midi_port %}selected{% endif %}>
+                    {{ midi_port }}
+                </option>
+                {% endfor %}
+
+            </select>
+        </div>
+
+    </div>
+
+    {% if not midi_ports %}
+    <p style="color:#d99a35;">
+        No MIDI input ports found. Check loopMIDI and restart
+        DMXShowControl if necessary.
+    </p>
+    {% endif %}
+
+    <p style="margin-top:15px;color:#999;">
+        The selected port will be used to receive MIDI messages.
+    </p>
+
+</div>
+
+
+
+<div class="card">
+    <h3>🎹 MIDI-Octave-assignment</h3>
+
+    <p>
+        Determine the name of the lowest reference note.
+        Then play the highest note first, followed by
+        the lowest note.
+    </p>
+
+    <label for="midi_note_name_highest">
+        Name of the Highest Note
+    </label>
+
+    <input
+        type="text"
+        id="midi_note_name_highest"
+        value="{{ settings.get('midi_note_name_highest') or 'G8' }}"
+        placeholder="G8"
+    >
+
+    <label for="midi_note_name_lowest">
+        Name of the Lowest Note
+    </label>
+
+    <input
+        type="text"
+        id="midi_note_name_lowest"
+        value="{{ settings.get('midi_note_name_lowest') or 'C-2' }}"
+        placeholder="C-2"
+    >
+
+    <div class="form-grid">
+        <button type="button" id="learn-highest">
+            Learn the Highest Note
+        </button>
+
+        <button type="button" id="learn-lowest">
+            Learn the Lowest Note
+        </button>
+    </div>
+
+    <p id="midi-learn-status" aria-live="polite">
+        Not yet calibrated.
+    </p>
+
+    <button type="button" id="save-midi-calibration">
+        Apply Assignment
+    </button>
+</div>
+
 
 
 <!-- External Applications -->
@@ -823,5 +945,176 @@ document.addEventListener(
 );
 
 </script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const highestNameInput = document.getElementById("midi_note_name_highest");
+    const lowestNameInput = document.getElementById("midi_note_name_lowest");
+    const statusText = document.getElementById("midi-learn-status");
+    const learnHighestButton = document.getElementById("learn-highest");
+    const learnLowestButton = document.getElementById("learn-lowest");
+    const saveButton = document.getElementById("save-midi-calibration");
+
+
+    const calibrationSaved =
+        {{ settings.get('midi_calibration_saved')|tojson }};
+
+    let highestNote = calibrationSaved
+        ? {{ settings.get('midi_note_number_highest')|tojson }}
+        : null;
+
+    let lowestNote = calibrationSaved
+        ? {{ settings.get('midi_note_number_lowest')|tojson }}
+        : null;
+    let learningTarget = null;
+    let pollingTimer = null;
+
+    function updateStatus() {
+        const highestText = highestNote === null
+            ? "Noch nicht gelernt"
+            : `MIDI ${highestNote}`;
+
+        const lowestText = lowestNote === null
+            ? "Noch nicht gelernt"
+            : `MIDI ${lowestNote}`;
+
+        statusText.textContent =
+            `Höchste Note: ${highestText} | Tiefste Note: ${lowestText}`;
+    }
+
+    async function startLearning(target) {
+        try {
+            const response = await fetch(
+                `/settings/midi-learn/${target}`,
+                { method: "POST" }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Lernen konnte nicht gestartet werden.");
+            }
+
+            learningTarget = target;
+            statusText.textContent =
+                target === "highest"
+                    ? "Bitte jetzt die HÖCHSTE Referenznote spielen …"
+                    : "Bitte jetzt die TIEFSTE Referenznote spielen …";
+
+            learnHighestButton.disabled = true;
+            learnLowestButton.disabled = true;
+            saveButton.disabled = true;
+
+            if (pollingTimer) {
+                clearInterval(pollingTimer);
+            }
+
+            pollingTimer = setInterval(checkLearningStatus, 250);
+        } catch (error) {
+            statusText.textContent = error.message;
+        }
+    }
+
+    async function checkLearningStatus() {
+        try {
+            const response = await fetch("/settings/midi-learn/status");
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Status konnte nicht geladen werden.");
+            }
+
+            // Solange MIDIManager auf eine Note wartet, weiter abfragen.
+            if (data.waiting) {
+                return;
+            }
+
+            // Nur die Note übernehmen, die zum aktuellen Lernvorgang gehört.
+            if (
+                learningTarget &&
+                data.learned_target === learningTarget &&
+                data.learned_note !== null &&
+                data.learned_note !== undefined
+            ) {
+                if (learningTarget === "highest") {
+                    highestNote = Number(data.learned_note);
+                } else {
+                    lowestNote = Number(data.learned_note);
+                }
+
+                statusText.textContent =
+                    `Note erkannt: MIDI ${data.learned_note}`;
+
+                learningTarget = null;
+                clearInterval(pollingTimer);
+                pollingTimer = null;
+
+                learnHighestButton.disabled = false;
+                learnLowestButton.disabled = false;
+                saveButton.disabled = false;
+
+                updateStatus();
+            }
+        } catch (error) {
+            statusText.textContent = error.message;
+            learningTarget = null;
+
+            if (pollingTimer) {
+                clearInterval(pollingTimer);
+                pollingTimer = null;
+            }
+
+            learnHighestButton.disabled = false;
+            learnLowestButton.disabled = false;
+            saveButton.disabled = false;
+        }
+    }
+
+    learnHighestButton.addEventListener("click", () => {
+        startLearning("highest");
+    });
+
+    learnLowestButton.addEventListener("click", () => {
+        startLearning("lowest");
+    });
+
+    
+    saveButton.addEventListener("click", async () => {
+        if (lowestNote === null || highestNote === null) {
+            statusText.textContent =
+                "Bitte zuerst beide Referenznoten einlernen.";
+            return;
+        }
+
+        try {
+            const response = await fetch("/settings/midi-calibration/save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name_highest: highestNameInput.value.trim(),
+                    name_lowest: lowestNameInput.value.trim(),
+                    lowest: lowestNote,
+                    highest: highestNote
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Speichern fehlgeschlagen.");
+            }
+
+            statusText.textContent =
+                data.message || "MIDI-Oktavzuordnung gespeichert.";
+        } catch (error) {
+            statusText.textContent = error.message;
+        }
+    });
+
+
+    updateStatus();
+});
+</script>
+
 
 {% endblock %}

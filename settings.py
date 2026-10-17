@@ -15,8 +15,15 @@ DEFAULT_SETTINGS = {
     "timing-global-record": "r",
     "timing-global-sim": "mediaplaypause",
     "timing-live": "f3",
-    "timing-mode": "live",
-    "external_applications": []
+    "timing-mode": "live",    
+    "external_applications": [],
+    "midi_input_port": "",
+    "midi_input_port": "",
+    "midi_note_name_highest": "G8",
+    "midi_note_name_lowest": "C-2",
+    "midi_note_number_highest": None,
+    "midi_note_number_lowest": None,
+    "midi_calibration_saved": False,
 }
 
 
@@ -144,6 +151,12 @@ class SettingsManager:
     def port(self):
 
         return self.settings["port"]
+
+
+    @property
+    def midi_input_port(self):
+
+        return self.settings["midi_input_port"]
 
 
 

@@ -42,10 +42,50 @@
             ],
             "name": "2",
             "enabled": true,
-            "type": "keyboard",
-            "keys": [
-                "2"
-            ]
+            "type": "midi",
+            "input": 0,
+            "input_name": "C-2"
+        },
+        {
+            "id": 4,
+            "actions": [
+                {
+                    "type": "scene",
+                    "target": "pos3"
+                }
+            ],
+            "name": "3",
+            "enabled": true,
+            "type": "midi",
+            "input": 1,
+            "input_name": "C#-2"
+        },
+        {
+            "id": 5,
+            "actions": [
+                {
+                    "type": "scene",
+                    "target": "pos4"
+                }
+            ],
+            "name": "4",
+            "enabled": true,
+            "type": "midi",
+            "input": 4,
+            "input_name": "E-2"
+        },
+        {
+            "id": 6,
+            "actions": [
+                {
+                    "type": "scene",
+                    "target": "reset"
+                }
+            ],
+            "name": "reset 2",
+            "enabled": true,
+            "type": "midi",
+            "input": 127
         }
     ]
 }

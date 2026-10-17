@@ -22,6 +22,12 @@
                 "start_with_app": false,
                 "stop_with_app": false
             }
-        ]
+        ],
+        "midi_input_port": "DMX-ShowCotrol MIDI 1 0",
+        "midi_note_name_highest": "G8",
+        "midi_note_name_lowest": "C-2",
+        "midi_note_number_highest": 127,
+        "midi_note_number_lowest": 0,
+        "midi_calibration_saved": true
     }
 }

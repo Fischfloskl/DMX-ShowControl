@@ -18,12 +18,18 @@ from export_manager import ExportManager
 from import_manager import ImportManager
 from show_controller import ShowController
 from external_application_manager import ExternalApplicationManager
+from audio.audio_analyzer import AudioAnalyzer
+from music_beat_engine import MusicBeatEngine
+from music_show_engine import MusicShowEngine
+from audio_sequence_manager import AudioSequenceManager
+from midi_manager import MidiManager
 
 import re
 import os
 import json
 import threading
 import time
+import mido
 
 
 app = Flask(__name__)
@@ -40,7 +46,7 @@ print(url)
 
 
 # ----------------------------
-# Grundsystem
+# Main
 # ----------------------------
 
 serial = SerialManager()
@@ -51,6 +57,20 @@ dmx_manager = DMXManager(
 
 trigger_manager = TriggerManager()
 scene_manager = SceneManager()
+
+# ----------------------------
+# Audio / Music Sync
+# ----------------------------
+
+audio_analyzer = AudioAnalyzer()
+
+music_beat_engine = MusicBeatEngine(
+    audio_analyzer
+)
+
+audio_sequence_manager = AudioSequenceManager()
+
+
 
 # ----------------------------
 # Engines
@@ -75,6 +95,20 @@ sequence_manager = SequenceManager(
     fade_manager,
     fade_engine,
     strobe_manager
+)
+
+
+# ----------------------------
+# Music Show Engine
+# ----------------------------
+
+music_show_engine = MusicShowEngine(
+    beat_engine=music_beat_engine,
+    scene_manager=scene_manager,
+    fade_manager=fade_manager,
+    fade_engine=fade_engine,
+    sequence_manager=sequence_manager,
+    dmx_manager=dmx_manager,
 )
 
 
@@ -141,6 +175,18 @@ import_manager = ImportManager(
     devices
 )
 external_application_manager = ExternalApplicationManager(settings)
+
+
+
+# MIDI-Eingang initialisieren
+midi_manager = MidiManager(
+    on_message=trigger_engine.handle_midi_message
+)
+
+# Gespeicherten MIDI-Port beim Start öffnen
+midi_manager.connect(
+    settings.midi_input_port or ""
+)
 
 
 PYTHON_TO_JS_KEYS = {
@@ -320,11 +366,12 @@ def dashboard():
     )
 
 @app.context_processor
-def inject_mode():
-
+def inject_globals():
     return {
+        "settings": settings,
+        "config": settings.settings,
         "mode": settings.get("mode"),
-        "problems":reference_checker.check()
+        "problems": reference_checker.check()
     }
 
 
@@ -1323,6 +1370,8 @@ def delete_scene():
     return redirect(
         "/scenes"
     )
+
+
 # --------------------------------
 # TRIGGERS
 # --------------------------------
@@ -1330,6 +1379,11 @@ def delete_scene():
 
 @app.route("/triggers")
 def trigger_editor():
+    for trigger in trigger_manager.triggers:
+        if trigger.get("type") == "midi":
+            trigger["input_name"] = trigger_manager.midi_note_name(
+                trigger.get("input")
+            )
 
     return render_template(
         "triggers.html",
@@ -1378,6 +1432,10 @@ def edit_trigger():
 
         return "Trigger not found",404
 
+    if trigger.get("type") == "midi":
+        trigger["input_name"] = trigger_manager.midi_note_name(
+            trigger.get("input")
+        )
 
 
     return render_template(
@@ -1386,7 +1444,8 @@ def edit_trigger():
         scenes=scene_manager.scenes,
         fades=fade_manager.fades,
         sequences=sequence_manager.sequences,
-        strobes=strobe_manager.strobes
+        strobes=strobe_manager.strobes,
+        midi_note_name=trigger_manager.midi_note_name
     )
 
 
@@ -1452,10 +1511,21 @@ def save_trigger():
         )
 
     if trigger["type"] == "midi":
-        trigger["input"] = request.form.get(
-            "midi_input",
-            ""
-        )
+        midi_input = request.form.get("input", "").strip()
+        print("[DEBUG] Form data:", request.form.to_dict())
+        print("[DEBUG] MIDI input:", repr(request.form.get("midi_input")))
+        try:
+            midi_input = int(midi_input)
+        except (TypeError, ValueError):
+            return "Invalid MIDI note. Please select a note between 0 and 127.", 400
+
+        if not 0 <= midi_input <= 127:
+            return "MIDI note must be between 0 and 127.", 400
+
+        trigger["input"] = midi_input
+
+        # Remove keyboard-specific data
+        trigger.pop("keys", None)
 
     # Aktionen neu aufbauen
 
@@ -1728,16 +1798,25 @@ def save_device():
 
     return redirect("/devices")
 
+
 @app.route("/settings")
 def settings_page():
+    try:
+        midi_ports = mido.get_input_names()
+    except Exception as e:
+        print(f"MIDI-Ports konnten nicht geladen werden: {e}")
+        midi_ports = []
 
     return render_template(
         "settings.html",
-        create_qr = settings.create_qr,
-        refresh_rate = settings.refresh_rate,
-        network_mode = settings.network_mode,
-        port = settings.port
+        create_qr=settings.create_qr,
+        refresh_rate=settings.refresh_rate,
+        network_mode=settings.network_mode,
+        port=settings.port,
+        midi_ports=midi_ports,
+        midi_input_port=settings.midi_input_port
     )
+
 
 @app.route("/settings/export_old")
 def export_show_old():
@@ -1923,6 +2002,7 @@ def import_show():
     )
 
 
+
 @app.route("/settings/save", methods=["POST"])
 def save_settings():
 
@@ -1946,12 +2026,19 @@ def save_settings():
         request.form["create_qr"] == "true"
     )
 
-
+    # MIDI-Eingangsport speichern
+    settings.set(
+        "midi_input_port",
+        request.form.get("midi_input_port", "").strip()
+    )
+    
     settings.save()
+    midi_manager.connect(
+        settings.midi_input_port or ""
+    )
 
-    #return redirect("/settings")
-    #return redirect("/")
-    return redirect(request.referrer or '/')
+    return redirect(request.referrer or "/settings")
+
 
 @app.route("/settings/save-timing", methods=["POST"])
 def save_settings_timing():
@@ -2036,6 +2123,168 @@ def remove_external_application():
     return jsonify(
         success=True
     )
+
+
+@app.route("/settings/midi-learn/<target>", methods=["POST"])
+def start_midi_learning(target):
+    if target not in ("highest", "lowest"):
+        return jsonify({"error": "Ungültiges Lernziel"}), 400
+
+    if not midi_manager.port:
+        return jsonify({
+            "error": "Kein MIDI-Eingang verbunden."
+        }), 400
+
+    midi_manager.start_learning(target)
+    return jsonify({"success": True})
+
+
+@app.route("/settings/midi-learn/status")
+def midi_learning_status():
+    return jsonify(midi_manager.get_learning_status())
+
+
+
+
+@app.route("/settings/midi-calibration/save", methods=["POST"])
+def save_midi_calibration():
+    data = request.get_json(silent=True) or {}
+
+    name_highest = str(data.get("name_highest", "")).strip()
+    name_lowest = str(data.get("name_lowest", "")).strip()
+
+    lowest = data.get("lowest")
+    highest = data.get("highest")
+
+    # Unterstützt beispielsweise C-2, C#3, Db4 und G8.
+    note_pattern = r"([A-Ga-g])([#b]?)(-?\d+)"
+
+    note_values = {
+        "C": 0,
+        "D": 2,
+        "E": 4,
+        "F": 5,
+        "G": 7,
+        "A": 9,
+        "B": 11
+    }
+
+    def parse_note_name(name):
+        match = re.fullmatch(note_pattern, name)
+
+        if not match:
+            return None
+
+        letter = match.group(1).upper()
+        accidental = match.group(2)
+
+        pitch_class = note_values[letter]
+
+        if accidental == "#":
+            pitch_class = (pitch_class + 1) % 12
+        elif accidental == "b":
+            pitch_class = (pitch_class - 1) % 12
+
+        octave = int(match.group(3))
+
+        # Ableton-Konvention:
+        # C-2 = MIDI 0, C-1 = MIDI 12, C0 = MIDI 24.
+        midi_number = (octave + 2) * 12 + pitch_class
+
+        return midi_number
+
+    # Beide Notennamen validieren.
+    expected_lowest = parse_note_name(name_lowest)
+    expected_highest = parse_note_name(name_highest)
+
+    if expected_lowest is None:
+        return jsonify({
+            "error": (
+                "Ungültiger Name der tiefsten Note. "
+                "Beispiele: C-2, C#3 oder Db4."
+            )
+        }), 400
+
+    if expected_highest is None:
+        return jsonify({
+            "error": (
+                "Ungültiger Name der höchsten Note. "
+                "Beispiele: G8 oder C5."
+            )
+        }), 400
+
+    # Eingelernte MIDI-Notennummern validieren.
+    try:
+        if isinstance(lowest, bool) or isinstance(highest, bool):
+            raise ValueError
+
+        lowest = int(lowest)
+        highest = int(highest)
+
+        # Keine Dezimalwerte wie 60.5 akzeptieren.
+        if str(data.get("lowest")) != str(lowest):
+            raise ValueError
+
+        if str(data.get("highest")) != str(highest):
+            raise ValueError
+
+    except (TypeError, ValueError):
+        return jsonify({
+            "error": "Ungültige MIDI-Notennummern."
+        }), 400
+
+    if not (0 <= lowest <= 127 and 0 <= highest <= 127):
+        return jsonify({
+            "error": "MIDI-Noten müssen zwischen 0 und 127 liegen."
+        }), 400
+
+    if highest <= lowest:
+        return jsonify({
+            "error": (
+                "Die höchste Referenznote muss höher sein "
+                "als die tiefste Referenznote."
+            )
+        }), 400
+
+    # Prüfen, ob die eingegebenen Namen zu den eingelernten
+    # MIDI-Notennummern passen.
+    if expected_lowest != lowest:
+        return jsonify({
+            "error": (
+                f"{name_lowest} entspricht nach der Ableton-Konvention "
+                f"MIDI {expected_lowest}, eingelernt wurde aber MIDI "
+                f"{lowest}."
+            )
+        }), 400
+
+    if expected_highest != highest:
+        return jsonify({
+            "error": (
+                f"{name_highest} entspricht nach der Ableton-Konvention "
+                f"MIDI {expected_highest}, eingelernt wurde aber MIDI "
+                f"{highest}."
+            )
+        }), 400
+
+    # Einstellungen speichern.
+    settings.set("midi_note_name_lowest", name_lowest)
+    settings.set("midi_note_name_highest", name_highest)
+    settings.set("midi_note_number_lowest", lowest)
+    settings.set("midi_note_number_highest", highest)
+    settings.set("midi_calibration_saved", True)
+    settings.save()
+
+    return jsonify({
+        "success": True,
+        "message": (
+            f"Zuordnung gespeichert: {name_lowest} = MIDI {lowest}, "
+            f"{name_highest} = MIDI {highest}."
+        )
+    })
+
+
+
+
 
 @app.route("/sequences")
 def sequences():
@@ -2770,3 +3019,493 @@ def stop_strobe():
     strobe_manager.stop()
 
     return "OK"
+
+
+
+# ============================================================
+# MUSIC SYNC – AUDIO CAPTURE API
+# ============================================================
+
+@app.get("/audio")
+def audio_page():
+    return render_template("audio.html")
+
+
+@app.get("/api/audio/devices")
+def audio_devices():
+    try:
+        return jsonify({
+            "devices": AudioAnalyzer.list_devices()
+        })
+    except Exception as exc:
+        app.logger.exception("Audio-Geräteliste konnte nicht geladen werden")
+        return jsonify({
+            "error": str(exc)
+        }), 500
+
+
+@app.get("/api/audio/status")
+def audio_status():
+    return jsonify(audio_analyzer.get_state())
+
+
+@app.post("/api/audio/start")
+def audio_start():
+    data = request.get_json(silent=True) or {}
+    device_index = data.get("device_index")
+
+    if device_index is None:
+        return jsonify({
+            "error": "Bitte ein Audiogerät auswählen."
+        }), 400
+
+    try:
+        audio_analyzer.start(int(device_index))
+        return jsonify(audio_analyzer.get_state())
+
+    except (TypeError, ValueError) as exc:
+        return jsonify({
+            "error": str(exc)
+        }), 400
+
+    except Exception as exc:
+        app.logger.exception("Audio-Capture konnte nicht gestartet werden")
+        return jsonify({
+            "error": str(exc)
+        }), 500
+
+
+@app.post("/api/audio/stop")
+def audio_stop():
+    try:
+        audio_analyzer.stop()
+        return jsonify(audio_analyzer.get_state())
+
+    except Exception as exc:
+        app.logger.exception("Audio-Capture konnte nicht gestoppt werden")
+        return jsonify({
+            "error": str(exc)
+        }), 500
+
+
+# ============================================================
+# MUSIC SYNC API
+# ============================================================
+
+@app.get("/api/music/config")
+def music_config_get():
+    return jsonify({
+        "beat": music_beat_engine.get_config(),
+        "show": music_show_engine.get_config(),
+    })
+
+
+@app.post("/api/music/config")
+def music_config_save():
+    data = request.get_json(silent=True) or {}
+
+    try:
+        beat_config = data.get("beat", {})
+        show_config = data.get("show", {})
+
+        if not isinstance(beat_config, dict):
+            raise ValueError("Ungültige Beat-Konfiguration.")
+
+        if not isinstance(show_config, dict):
+            raise ValueError("Ungültige Show-Konfiguration.")
+
+        music_beat_engine.configure(beat_config)
+        music_show_engine.set_config(show_config)
+
+        return jsonify({
+            "success": True,
+            "beat": music_beat_engine.get_config(),
+            "show": music_show_engine.get_config(),
+        })
+
+    except (TypeError, ValueError) as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    except Exception as exc:
+        app.logger.exception("Music-Sync-Konfiguration konnte nicht gespeichert werden")
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.get("/api/music/status")
+def music_status():
+    return jsonify({
+        "audio": audio_analyzer.get_state(),
+        "beat": music_beat_engine.get_state(),
+        "show": music_show_engine.get_state(),
+    })
+
+
+@app.post("/api/music/start")
+def music_start():
+    if not audio_analyzer.get_state().get("running"):
+        return jsonify({
+            "error": "Bitte zuerst unter /audio die Audio-Erfassung starten."
+        }), 400
+
+    try:
+        music_beat_engine.start()
+
+        # Beat-Aktionen sind optional.
+        show_config = music_show_engine.get_config()
+
+        if (
+            show_config.get("enabled")
+            and show_config.get("actions")
+        ):
+            music_show_engine.start()
+
+        return jsonify({
+            "success": True,
+            "beat": music_beat_engine.get_state(),
+            "show": music_show_engine.get_state(),
+        })
+
+    except (TypeError, ValueError) as exc:
+        music_show_engine.stop()
+        music_beat_engine.stop()
+
+        return jsonify({"error": str(exc)}), 400
+
+    except Exception as exc:
+        music_show_engine.stop()
+        music_beat_engine.stop()
+
+        app.logger.exception("Music-Sync konnte nicht gestartet werden")
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.post("/api/music/stop")
+def music_stop():
+    # Stoppt die Musiksteuerung, nicht den gesamten ShowController.
+    music_show_engine.stop()
+    music_beat_engine.stop()
+
+    return jsonify({
+        "success": True,
+        "beat": music_beat_engine.get_state(),
+        "show": music_show_engine.get_state(),
+    })
+# ============================================================
+# AUDIO SEQUENCES API
+# ============================================================
+
+@app.get("/api/audio-sequences")
+def audio_sequences_list():
+    return jsonify({
+        "success": True,
+        "sequences": audio_sequence_manager.list_sequences(),
+        "state": audio_sequence_manager.get_state(),
+    })
+
+
+@app.post("/api/audio-sequences")
+def audio_sequences_create():
+    data = request.get_json(silent=True) or {}
+
+    name = data.get("name", "")
+    description = data.get("description", "")
+
+    try:
+        sequence = audio_sequence_manager.create_sequence(
+            name=name,
+            description=description,
+        )
+
+        return jsonify({
+            "success": True,
+            "sequence": sequence,
+        }), 201
+
+    except (ValueError, OSError) as error:
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 400
+
+
+@app.get("/api/audio-sequences/<name>")
+def audio_sequence_get(name):
+    try:
+        sequence = audio_sequence_manager.load_sequence(name)
+
+        return jsonify({
+            "success": True,
+            "sequence": sequence,
+        })
+
+    except FileNotFoundError as error:
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 404
+
+    except (ValueError, OSError) as error:
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 400
+
+
+@app.put("/api/audio-sequences/<name>")
+def audio_sequence_save(name):
+    data = request.get_json(silent=True) or {}
+
+    try:
+        sequence = audio_sequence_manager.save_sequence(
+            name=name,
+            data=data,
+        )
+
+        return jsonify({
+            "success": True,
+            "sequence": sequence,
+        })
+
+    except (ValueError, OSError) as error:
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 400
+
+
+@app.delete("/api/audio-sequences/<name>")
+def audio_sequence_delete(name):
+    try:
+        audio_sequence_manager.delete_sequence(name)
+
+        return jsonify({
+            "success": True,
+        })
+
+    except FileNotFoundError as error:
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 404
+
+    except (ValueError, OSError) as error:
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 400
+
+
+@app.get("/api/audio-sequences/settings")
+def audio_sequence_settings_get():
+    return jsonify({
+        "success": True,
+        "settings": audio_sequence_manager.get_global_settings(),
+    })
+
+
+@app.put("/api/audio-sequences/settings")
+def audio_sequence_settings_save():
+    data = request.get_json(silent=True) or {}
+
+    try:
+        settings_data = audio_sequence_manager.save_global_settings(data)
+
+        return jsonify({
+            "success": True,
+            "settings": settings_data,
+        })
+
+    except (ValueError, OSError) as error:
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 400
+
+
+@app.get("/api/audio-sequences/<name>/settings")
+def audio_sequence_effective_settings(name):
+    try:
+        sequence = audio_sequence_manager.load_sequence(name)
+        effective = audio_sequence_manager.get_effective_settings(sequence)
+
+        return jsonify({
+            "success": True,
+            "settings": effective,
+            "reaction": sequence.get("reaction", {}),
+        })
+
+    except FileNotFoundError as error:
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 404
+
+    except (ValueError, OSError) as error:
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 400
+
+
+
+
+
+# ============================================================
+# AUDIO SEQUENCE CONTROLLER
+# ============================================================
+
+audio_sequence_lock = threading.RLock()
+active_audio_sequence = None
+
+
+
+def start_audio_sequence(name):
+    global active_audio_sequence
+
+    with audio_sequence_lock:
+        # Sequenz laden und effektive Einstellungen bestimmen.
+        sequence = audio_sequence_manager.load_sequence(name)
+        audio_settings = audio_sequence_manager.get_effective_settings(
+            sequence
+        )
+
+        device_index = audio_settings.get("device_index")
+
+        # Wenn bereits ein Capture läuft, dessen Gerät weiterverwenden,
+        # sofern kein Gerät explizit konfiguriert wurde.
+        current_audio = audio_analyzer.get_state()
+
+        if device_index is None and current_audio.get("running"):
+            device_index = current_audio.get("device_index")
+
+        if device_index is None:
+            raise ValueError(
+                "Kein Audiogerät konfiguriert. "
+                "Bitte wähle ein Gerät in den globalen Audio-Einstellungen."
+            )
+
+        # Vorherige Audio-Sequenz und Musiksteuerung beenden.
+        music_show_engine.stop()
+        music_beat_engine.stop()
+
+        # Audioquelle wechseln oder neu starten, falls erforderlich.
+        current_audio = audio_analyzer.get_state()
+
+        if (
+            not current_audio.get("running")
+            or current_audio.get("device_index") != int(device_index)
+        ):
+            audio_analyzer.start(int(device_index))
+
+        # Beat-Einstellungen dieser Sequenz anwenden.
+        music_beat_engine.configure({
+            "source": audio_settings["source"],
+            "sensitivity": audio_settings["sensitivity"],
+            "min_interval_ms": audio_settings["min_interval_ms"],
+            "eq_weights": audio_settings["eq_weights"],
+        })
+
+        # Sequenz als aktiv markieren.
+        audio_sequence_manager.start(name)
+        active_audio_sequence = name
+
+        # Beat-Erkennung starten.
+        music_beat_engine.start()
+
+        show_config = music_show_engine.get_config()
+
+        if show_config.get("enabled") and show_config.get("actions"):
+            music_show_engine.start()
+
+        # Vorhandene beatbasierte Musiksteuerung starten.
+        # Sie führt nur Aktionen aus, wenn diese in der
+        # bestehenden MusicShowEngine konfiguriert sind.
+
+        return {
+            "success": True,
+            "active_sequence": active_audio_sequence,
+            "audio": audio_analyzer.get_state(),
+            "beat": music_beat_engine.get_state(),
+            "show": music_show_engine.get_state(),
+            "settings": audio_settings,
+            "reaction": sequence.get("reaction", {}),
+        }
+
+
+def stop_audio_sequence():
+    global active_audio_sequence
+
+    with audio_sequence_lock:
+        # Erst die Reaktionen und Beat-Erkennung stoppen.
+        music_show_engine.stop()
+        music_beat_engine.stop()
+
+        # Danach den Audio-Capture beenden.
+        audio_analyzer.stop()
+
+        audio_sequence_manager.stop()
+        active_audio_sequence = None
+
+        return {
+            "success": True,
+            "active_sequence": None,
+            "audio": audio_analyzer.get_state(),
+            "beat": music_beat_engine.get_state(),
+            "show": music_show_engine.get_state(),
+        }
+
+
+trigger_engine.set_audio_sequence_callbacks(
+    start_callback=start_audio_sequence,
+    stop_callback=stop_audio_sequence,
+)
+
+@app.post("/api/audio-sequences/<name>/start")
+def audio_sequence_start(name):
+    try:
+        result = start_audio_sequence(name)
+        return jsonify(result)
+
+    except FileNotFoundError as error:
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 404
+
+    except (ValueError, TypeError) as error:
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 400
+
+    except Exception as error:
+        app.logger.exception(
+            "Audio-Sequenz konnte nicht gestartet werden"
+        )
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 500
+
+
+@app.post("/api/audio-sequences/stop")
+def audio_sequence_stop():
+    try:
+        return jsonify(stop_audio_sequence())
+
+    except Exception as error:
+        app.logger.exception(
+            "Audio-Sequenz konnte nicht gestoppt werden"
+        )
+        return jsonify({
+            "success": False,
+            "error": str(error),
+        }), 500
+
+
+@app.get("/api/audio-sequences/active")
+def audio_sequence_active():
+    return jsonify({
+        "success": True,
+        "active_sequence": active_audio_sequence,
+    })

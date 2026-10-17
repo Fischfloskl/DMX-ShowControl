@@ -160,7 +160,7 @@ Hotkeys
 type="hidden"
 name="keys"
 id="keys_input"
-value="{{ trigger['keys']|join(',') }}"
+value="{% if trigger.get('type', 'keyboard') == 'keyboard' %}{{ trigger.get('keys', [])|join(',') }}{% endif %}"
 >
 
 
@@ -171,6 +171,7 @@ class="key-box">
 
 
 {% if trigger['keys'] %}
+{% if trigger.get('type', 'keyboard') == 'keyboard' %}
 
 
 {% for key in trigger['keys'] %}
@@ -191,7 +192,7 @@ Keine Taste
 
 
 {% endif %}
-
+{% endif %}
 
 </div>
 
@@ -237,19 +238,20 @@ Note / CC
 </label>
 
 
-<input
-class="text-input btna"
-type="number"
-name="midi_input"
-value="{{ trigger.get('input','') }}"
-placeholder="e.g. 60">
+<label for="midi-note">MIDI Note</label>
 
-
-<p style="color:#999;">
-
-Temporary: MIDI Note Number
-
-</p>
+<select id="midi-note" name="input">
+    {% for note in range(128) %}
+        <option value="{{ note }}"
+            {% if trigger.get('type') == 'midi'
+                  and trigger.get('input') is not none
+                  and trigger.get('input')|string == note|string %}
+                selected
+            {% endif %}>
+            {{ note }} - {{ midi_note_name(note) }}
+        </option>
+    {% endfor %}
+</select>
 
 
 </div>

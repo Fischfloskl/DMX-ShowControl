@@ -1,0 +1,16 @@
+{
+    "device_index": null,
+    "source": "bass",
+    "sensitivity": 150,
+    "min_interval_ms": 120,
+    "eq_weights": [
+        180,
+        300,
+        200,
+        80,
+        50,
+        40,
+        25,
+        15
+    ]
+}

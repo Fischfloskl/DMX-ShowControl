@@ -72,29 +72,47 @@ class TriggerManager:
             self.triggers = []
 
 
+        
         updated = False
 
-        # alte Trigger automatisch migrieren
+        # Migrate and normalize existing triggers
         for trigger in self.triggers:
+            if not isinstance(trigger, dict):
+                continue
 
-            if "keys" not in trigger:
+            trigger_type = trigger.get("type", "keyboard")
 
+            if trigger_type == "keyboard":
+                if "keys" not in trigger:
+                    old_input = trigger.pop("input", None)
+
+                    if isinstance(old_input, list):
+                        trigger["keys"] = old_input
+                    elif old_input:
+                        trigger["keys"] = [old_input]
+                    else:
+                        trigger["keys"] = []
+
+                    updated = True
+
+                elif not isinstance(trigger["keys"], list):
+                    trigger["keys"] = (
+                        [trigger["keys"]]
+                        if trigger["keys"]
+                        else []
+                    )
+                    updated = True
+
+            elif trigger_type == "midi":
                 if "input" in trigger:
-
-                    trigger["keys"] = [
-                        trigger.pop("input")
-                    ]
-
-                else:
-
-                    trigger["keys"] = []
-
-                updated = True
-
+                    try:
+                        trigger["input"] = int(trigger["input"])
+                    except (TypeError, ValueError):
+                        pass
 
         if updated:
-
             self.save()
+
 
     def save(self):
 
@@ -128,19 +146,19 @@ class TriggerManager:
                 ensure_ascii=False
             )
 
+    
     def add(self, trigger):
 
         if "id" not in trigger:
-
             trigger["id"] = self.get_next_id()
 
-        if "keys" not in trigger:
-
-            trigger["keys"] = []
+        if trigger.get("type", "keyboard") == "keyboard":
+            if "keys" not in trigger:
+                trigger["keys"] = []
 
         self.triggers.append(trigger)
-
         self.save()
+
 
     def get(self, name):
 
@@ -284,3 +302,23 @@ class TriggerManager:
         self.save()
 
         return new_trigger
+
+
+    def midi_note_name(self, note):
+        note_names = [
+            "C", "C#", "D", "D#", "E", "F",
+            "F#", "G", "G#", "A", "A#", "B"
+        ]
+
+        try:
+            note = int(note)
+        except (TypeError, ValueError):
+            return "Unknown"
+
+        if not 0 <= note <= 127:
+            return "Unknown"
+
+        name = note_names[note % 12]
+        octave = (note // 12) - 2
+
+        return f"{name}{octave}"

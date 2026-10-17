@@ -7,3 +7,8 @@ keyboard
 pyserial
 qrcode
 Pillow
+PyAudioWPatch
+numpy
+aubio
+mido
+python-rtmidi

@@ -156,7 +156,9 @@ Off
 {% else %}
 
 
-{{ trigger.input }}
+{% if trigger.get('type') == 'midi' %}
+    {{ trigger.get('input', '') }} - {{ trigger.get('input_name', 'Unknown') }}
+{% endif %}
 
 
 {% endif %}

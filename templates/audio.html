@@ -1,0 +1,1006 @@
+{% if mode == "edit" %}
+{% extends "base.html" %}
+{% else %}
+{% extends "show_base.html" %}
+{% endif %}
+
+{% block content %}
+<h1>Music Sync</h1>
+
+<!-- AUDIO SOURCE -->
+<div class="card">
+    <h2>Audioquelle</h2>
+    <p>
+        Wähle einen Windows-Audioausgang. Die Analyse läuft live;
+        es werden keine Audiodateien gespeichert.
+    </p>
+
+    <div class="scene-actions">
+        <select id="audio-device" aria-label="Audioquelle">
+            <option value="">Geräte werden geladen ...</option>
+        </select>
+
+        <button class="btn-primary" id="audio-start" type="button">
+            Audio starten
+        </button>
+
+        <button class="btn-danger" id="audio-stop" type="button" disabled>
+            Audio stoppen
+        </button>
+
+        <button class="btn-secondary" id="audio-refresh" type="button">
+            Geräte neu laden
+        </button>
+    </div>
+
+    <p id="audio-status">Status: nicht gestartet</p>
+    <p id="audio-error" class="error-message" role="alert"></p>
+</div>
+
+<!-- GENERAL AUDIO METERS -->
+<div class="card">
+    <h2>Live-Pegel</h2>
+
+    <div class="audio-meter">
+        <label for="meter-rms">Lautstärke (RMS)</label>
+        <progress id="meter-rms" max="1" value="0"></progress>
+        <span id="value-rms">0 %</span>
+    </div>
+
+    <div class="audio-meter">
+        <label for="meter-peak">Peak</label>
+        <progress id="meter-peak" max="1" value="0"></progress>
+        <span id="value-peak">0 %</span>
+    </div>
+
+    <div class="audio-meter">
+        <label for="meter-bass">Bass / Kick</label>
+        <progress id="meter-bass" max="1" value="0"></progress>
+        <span id="value-bass">0 %</span>
+    </div>
+
+    <div class="audio-meter">
+        <label for="meter-mid">Mitten</label>
+        <progress id="meter-mid" max="1" value="0"></progress>
+        <span id="value-mid">0 %</span>
+    </div>
+
+    <div class="audio-meter">
+        <label for="meter-treble">Höhen</label>
+        <progress id="meter-treble" max="1" value="0"></progress>
+        <span id="value-treble">0 %</span>
+    </div>
+</div>
+
+<!-- EIGHT BAND LIVE EQ -->
+<div class="card">
+    <h2>EQ-Live-Pegel</h2>
+    <p>Aktuelle Pegel der acht Frequenzbänder.</p>
+
+    {% for i in range(1, 9) %}
+    <div class="audio-meter">
+        <label for="meter-band-{{ i }}">EQ-Band {{ i }}</label>
+        <progress id="meter-band-{{ i }}" max="1" value="0"></progress>
+        <span id="value-band-{{ i }}">0 %</span>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- MUSIC SYNC STATUS -->
+<div class="card">
+    <h2>Music Sync</h2>
+
+    <div class="scene-actions">
+        <button class="btn-primary" id="music-start" type="button">
+            Music Sync starten
+        </button>
+
+        <button class="btn-danger" id="music-stop" type="button">
+            Music Sync stoppen
+        </button>
+    </div>
+
+    <p id="music-status">Music Sync: gestoppt</p>
+    <p id="music-error" class="error-message" role="alert"></p>
+
+    <div class="music-stats">
+        <div class="music-stat">
+            <span>Erkannte Beats</span>
+            <strong id="music-beat-count">0</strong>
+        </div>
+
+        <div class="music-stat">
+            <span>Geschätztes Tempo</span>
+            <strong><span id="music-bpm">–</span> <small>BPM</small></strong>
+        </div>
+    </div>
+</div>
+
+<!-- BEAT DETECTION -->
+<div class="card">
+    <h2>Beat-Erkennung</h2>
+
+    <div class="setting">
+        <label for="beat-source">Frequenzquelle</label>
+        <select id="beat-source">
+            <option value="bass">Bass / Kick (Band 1 + 2)</option>
+            <option value="combined">Alle 8 EQ-Bänder</option>
+            <option value="band_1">Band 1 – Subbass / Kick</option>
+            <option value="band_2">Band 2 – Bass</option>
+            <option value="band_3">Band 3 – Oberbass</option>
+            <option value="band_4">Band 4 – Untere Mitten</option>
+            <option value="band_5">Band 5 – Mitten</option>
+            <option value="band_6">Band 6 – Obere Mitten</option>
+            <option value="band_7">Band 7 – Präsenz</option>
+            <option value="band_8">Band 8 – Höhen</option>
+        </select>
+    </div>
+
+    <div class="setting">
+        <div class="setting-heading">
+            <label for="beat-sensitivity">Empfindlichkeit</label>
+            <output id="sensitivity-value" for="beat-sensitivity">150 %</output>
+        </div>
+
+        <input
+            id="beat-sensitivity"
+            type="range"
+            min="1"
+            max="350"
+            step="1"
+            value="150"
+        >
+
+        <div class="range-labels">
+            <span>1 %</span>
+            <span>350 %</span>
+        </div>
+    </div>
+
+    <div class="setting">
+        <label for="beat-min-interval">
+            Mindestabstand zwischen Beats (ms)
+        </label>
+
+        <input
+            id="beat-min-interval"
+            type="number"
+            min="10"
+            max="2000"
+            step="1"
+            value="120"
+        >
+
+        <small>
+            Niedrigere Werte erlauben schnellere Beat-Erkennung.
+            Zu niedrige Werte können Fehlauslösungen verursachen.
+        </small>
+    </div>
+
+    <label class="checkbox-setting" for="music-enabled">
+        <input type="checkbox" id="music-enabled">
+        Musikaktionen aktivieren
+    </label>
+</div>
+
+<!-- EQ WEIGHTS -->
+<div class="card">
+    <h2>8-Band-EQ für Music Sync</h2>
+
+    <p>
+        Die Gewichtungen beeinflussen, welche Frequenzbereiche
+        bei der Beat-Erkennung berücksichtigt werden.
+        0 % deaktiviert ein Band als Einflussquelle.
+    </p>
+
+    <div id="eq-controls"></div>
+</div>
+
+<!-- MUSIC ACTIONS -->
+<div class="card">
+    <h2>Musikaktionen</h2>
+
+    <p>
+        Aktionen werden anhand der erkannten Beats ausgelöst.
+        Der Zielname muss exakt dem Namen in DMXShowControl entsprechen.
+    </p>
+
+    <div id="music-actions"></div>
+
+    <div class="scene-actions">
+        <button class="btn-secondary" id="music-add-action" type="button">
+            + Aktion hinzufügen
+        </button>
+
+        <button class="btn-primary" id="music-save" type="button">
+            Einstellungen speichern
+        </button>
+    </div>
+</div>
+
+<style>
+.audio-meter {
+    display: grid;
+    grid-template-columns: minmax(120px, 180px) minmax(80px, 1fr) 55px;
+    align-items: center;
+    gap: 12px;
+    margin: 14px 0;
+}
+
+.audio-meter progress {
+    width: 100%;
+    height: 20px;
+}
+
+.audio-meter label {
+    overflow-wrap: anywhere;
+}
+
+.setting {
+    margin: 20px 0;
+}
+
+.setting > label,
+.setting-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.setting input[type="number"],
+.setting select {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+}
+
+.setting input[type="range"] {
+    width: 100%;
+}
+
+.setting small {
+    display: block;
+    margin-top: 6px;
+    opacity: 0.75;
+}
+
+.range-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85em;
+    opacity: 0.7;
+}
+
+.checkbox-setting {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.checkbox-setting input {
+    width: auto;
+}
+
+.music-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.music-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px;
+    border: 1px solid var(--border-color, #555);
+    border-radius: 8px;
+    min-width: 0;
+}
+
+.music-stat strong {
+    font-size: 1.7rem;
+    overflow-wrap: anywhere;
+}
+
+.music-stat small {
+    font-size: 0.8rem;
+}
+
+.eq-control {
+    display: grid;
+    grid-template-columns: minmax(150px, 210px) minmax(80px, 1fr) 55px;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.eq-control label {
+    overflow-wrap: anywhere;
+}
+
+.eq-control input[type="range"] {
+    width: 100%;
+    min-width: 0;
+}
+
+.eq-control output {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.music-action {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px;
+    margin: 14px 0;
+    border: 1px solid var(--border-color, #555);
+    border-radius: 8px;
+}
+
+.music-action label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.music-action input:not([type="checkbox"]),
+.music-action select {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+}
+
+.music-action .action-enabled {
+    flex-direction: row;
+    align-items: center;
+}
+
+.music-action .action-enabled input {
+    width: auto;
+}
+
+.music-action .action-delete {
+    grid-column: 1 / -1;
+}
+
+.error-message {
+    color: #d9534f;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+#audio-status {
+    overflow-wrap: anywhere;
+}
+
+#audio-device {
+    max-width: 100%;
+}
+
+@media (max-width: 600px) {
+    .audio-meter {
+        grid-template-columns: minmax(0, 1fr) 55px;
+        gap: 6px 10px;
+    }
+
+    .audio-meter label {
+        grid-column: 1 / -1;
+    }
+
+    .audio-meter progress {
+        grid-column: 1;
+    }
+
+    .audio-meter span {
+        grid-column: 2;
+        text-align: right;
+    }
+
+    .eq-control {
+        grid-template-columns: minmax(0, 1fr) 55px;
+        gap: 6px 10px;
+    }
+
+    .eq-control label {
+        grid-column: 1 / -1;
+    }
+
+    .eq-control input[type="range"] {
+        grid-column: 1;
+    }
+
+    .eq-control output {
+        grid-column: 2;
+        grid-row: 2;
+    }
+
+    .music-action {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .music-action .action-delete {
+        grid-column: 1;
+    }
+
+    .music-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+</style>
+
+<script>
+(() => {
+    "use strict";
+
+    const $ = id => document.getElementById(id);
+
+    const deviceSelect = $("audio-device");
+    const audioStatus = $("audio-status");
+    const audioError = $("audio-error");
+    const audioStart = $("audio-start");
+    const audioStop = $("audio-stop");
+
+    const musicStatus = $("music-status");
+    const musicError = $("music-error");
+    const musicActions = $("music-actions");
+    const eqControls = $("eq-controls");
+
+    const defaultEqWeights = [180, 300, 200, 80, 50, 40, 25, 15];
+
+    const eqBands = [
+        { name: "Band 1 – Subbass / Kick", frequency: "30–90 Hz" },
+        { name: "Band 2 – Bass", frequency: "90–180 Hz" },
+        { name: "Band 3 – Oberbass", frequency: "180–350 Hz" },
+        { name: "Band 4 – Untere Mitten", frequency: "350–700 Hz" },
+        { name: "Band 5 – Mitten", frequency: "700–1400 Hz" },
+        { name: "Band 6 – Obere Mitten", frequency: "1,4–2,8 kHz" },
+        { name: "Band 7 – Präsenz", frequency: "2,8–6 kHz" },
+        { name: "Band 8 – Höhen", frequency: "6–12 kHz" }
+    ];
+
+    let audioPollTimer = null;
+    let musicPollTimer = null;
+
+    async function api(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                ...(options.body ? { "Content-Type": "application/json" } : {}),
+                ...(options.headers || {})
+            }
+        });
+
+        let data;
+
+        try {
+            data = await response.json();
+        } catch {
+            throw new Error(`Ungültige Serverantwort (HTTP ${response.status}).`);
+        }
+
+        if (!response.ok) {
+            throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        return data;
+    }
+
+    function showError(element, error) {
+        element.textContent = error?.message || String(error);
+    }
+
+    function setMeter(name, value) {
+        const progress = $(`meter-${name}`);
+        const output = $(`value-${name}`);
+
+        if (!progress || !output) return;
+
+        const number = Number(value);
+        const safeValue = Number.isFinite(number)
+            ? Math.max(0, Math.min(1, number))
+            : 0;
+
+        progress.value = safeValue;
+        output.textContent = `${Math.round(safeValue * 100)} %`;
+    }
+
+    async function loadDevices() {
+        audioError.textContent = "";
+
+        const previousValue = deviceSelect.value;
+        deviceSelect.replaceChildren(
+            new Option("Geräte werden geladen ...", "")
+        );
+
+        try {
+            const data = await api("/api/audio/devices");
+            const devices = Array.isArray(data.devices) ? data.devices : [];
+
+            deviceSelect.replaceChildren();
+
+            if (devices.length === 0) {
+                deviceSelect.add(
+                    new Option("Keine Loopback-Geräte gefunden", "")
+                );
+                return;
+            }
+
+            devices.forEach(device => {
+                const label =
+                    `${device.name} (${device.sample_rate} Hz)`;
+
+                deviceSelect.add(
+                    new Option(label, String(device.index))
+                );
+            });
+
+            if ([...deviceSelect.options].some(
+                option => option.value === previousValue
+            )) {
+                deviceSelect.value = previousValue;
+            }
+        } catch (error) {
+            deviceSelect.replaceChildren(
+                new Option("Geräteliste nicht verfügbar", "")
+            );
+            showError(audioError, error);
+        }
+    }
+
+    async function pollAudioStatus() {
+        try {
+            const state = await api("/api/audio/status");
+
+            audioStatus.textContent = state.running
+                ? `Aktiv: ${state.device_name || "Audioquelle"} (${state.sample_rate || "?"} Hz)`
+                : "Status: nicht gestartet";
+
+            audioError.textContent = state.error || "";
+
+            setMeter("rms", state.rms);
+            setMeter("peak", state.peak);
+            setMeter("bass", state.bass);
+            setMeter("mid", state.mid);
+            setMeter("treble", state.treble);
+
+            const bands = Array.isArray(state.bands) ? state.bands : [];
+
+            for (let index = 0; index < 8; index++) {
+                setMeter(`band-${index + 1}`, bands[index] ?? 0);
+            }
+
+            audioStart.disabled = Boolean(state.running);
+            audioStop.disabled = !state.running;
+        } catch (error) {
+            showError(audioError, error);
+        }
+    }
+
+    audioStart.addEventListener("click", async () => {
+        audioError.textContent = "";
+
+        if (deviceSelect.value === "") {
+            audioError.textContent = "Bitte zuerst eine Audioquelle wählen.";
+            return;
+        }
+
+        audioStart.disabled = true;
+
+        try {
+            await api("/api/audio/start", {
+                method: "POST",
+                body: JSON.stringify({
+                    device_index: Number(deviceSelect.value)
+                })
+            });
+
+            await pollAudioStatus();
+        } catch (error) {
+            showError(audioError, error);
+            audioStart.disabled = false;
+        }
+    });
+
+    audioStop.addEventListener("click", async () => {
+        audioStop.disabled = true;
+
+        try {
+            await api("/api/audio/stop", { method: "POST" });
+            await pollAudioStatus();
+        } catch (error) {
+            showError(audioError, error);
+            audioStop.disabled = false;
+        }
+    });
+
+    $("audio-refresh").addEventListener("click", loadDevices);
+
+    // EQ-Gewichtungsregler erzeugen
+    function renderEQControls(weights = defaultEqWeights) {
+        eqControls.replaceChildren();
+
+        eqBands.forEach((band, index) => {
+            const wrapper = document.createElement("div");
+            wrapper.className = "eq-control";
+
+            const label = document.createElement("label");
+            label.htmlFor = `eq-weight-${index}`;
+            label.textContent = `${band.name} (${band.frequency})`;
+
+            const slider = document.createElement("input");
+            slider.type = "range";
+            slider.id = `eq-weight-${index}`;
+            slider.className = "eq-weight";
+            slider.min = "0";
+            slider.max = "350";
+            slider.step = "5";
+
+            const configuredWeight = Number(weights[index]);
+            slider.value = Number.isFinite(configuredWeight)
+                ? Math.max(0, Math.min(350, configuredWeight))
+                : defaultEqWeights[index];
+
+            const output = document.createElement("output");
+            output.htmlFor = slider.id;
+            output.textContent = `${slider.value} %`;
+
+            slider.addEventListener("input", () => {
+                output.textContent = `${slider.value} %`;
+            });
+
+            wrapper.append(label, slider, output);
+            eqControls.appendChild(wrapper);
+        });
+    }
+
+    function readEQWeights() {
+        return [...eqControls.querySelectorAll(".eq-weight")]
+            .map(slider => Number(slider.value));
+    }
+
+    // Musikaktionen
+    function createMusicAction(action = {}) {
+        const row = document.createElement("div");
+        row.className = "music-action";
+
+        const typeLabel = document.createElement("label");
+        typeLabel.appendChild(document.createTextNode("Aktionstyp"));
+
+        const type = document.createElement("select");
+
+        [
+            ["scene", "Szene"],
+            ["fade", "Fade"],
+            ["sequence", "Sequence"]
+        ].forEach(([value, label]) => {
+            type.add(new Option(label, value));
+        });
+
+        type.value = ["scene", "fade", "sequence"].includes(action.type)
+            ? action.type
+            : "scene";
+
+        typeLabel.appendChild(type);
+
+        const targetLabel = document.createElement("label");
+        targetLabel.appendChild(document.createTextNode("Zielname"));
+
+        const target = document.createElement("input");
+        target.type = "text";
+        target.required = true;
+        target.placeholder = "Exakter Name des Ziels";
+        target.value = action.target || "";
+        targetLabel.appendChild(target);
+
+        const everyLabel = document.createElement("label");
+        everyLabel.appendChild(document.createTextNode("Alle N Beats"));
+
+        const every = document.createElement("input");
+        every.type = "number";
+        every.min = "1";
+        every.max = "256";
+        every.step = "1";
+        every.value = action.every_beats ?? 1;
+        everyLabel.appendChild(every);
+
+        const phaseLabel = document.createElement("label");
+        phaseLabel.appendChild(
+            document.createTextNode("Phase (0 bis N−1)")
+        );
+
+        const phase = document.createElement("input");
+        phase.type = "number";
+        phase.min = "0";
+        phase.step = "1";
+        phase.value = action.phase ?? 0;
+        phaseLabel.appendChild(phase);
+
+        function validatePhase() {
+            const n = Math.max(1, Math.min(256, Number(every.value) || 1));
+            every.value = String(n);
+            phase.max = String(n - 1);
+
+            const currentPhase = Number(phase.value) || 0;
+            phase.value = String(
+                Math.max(0, Math.min(n - 1, currentPhase))
+            );
+        }
+
+        every.addEventListener("change", validatePhase);
+        phase.addEventListener("change", validatePhase);
+        validatePhase();
+
+        const enabledLabel = document.createElement("label");
+        enabledLabel.className = "action-enabled";
+
+        const enabled = document.createElement("input");
+        enabled.type = "checkbox";
+        enabled.checked = action.enabled !== false;
+
+        enabledLabel.append(
+            enabled,
+            document.createTextNode(" Aktiv")
+        );
+
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "btn-danger action-delete";
+        remove.textContent = "Aktion entfernen";
+        remove.addEventListener("click", () => row.remove());
+
+        row.append(
+            typeLabel,
+            targetLabel,
+            everyLabel,
+            phaseLabel,
+            enabledLabel,
+            remove
+        );
+
+        musicActions.appendChild(row);
+    }
+
+    function readMusicActions() {
+        return [...musicActions.querySelectorAll(".music-action")]
+            .map((row, index) => {
+                const fields = row.querySelectorAll("input, select");
+
+                return {
+                    id: index + 1,
+                    type: fields[0].value,
+                    target: fields[1].value.trim(),
+                    every_beats: Number(fields[2].value),
+                    phase: Number(fields[3].value),
+                    enabled: fields[4].checked
+                };
+            });
+    }
+
+    // Konfiguration speichern
+    async function saveMusicConfig() {
+        musicError.textContent = "";
+
+        const intervalInput = $("beat-min-interval");
+        let interval = Number(intervalInput.value);
+
+        if (!Number.isFinite(interval)) {
+            interval = 120;
+        }
+
+        interval = Math.max(10, Math.min(2000, Math.round(interval)));
+        intervalInput.value = String(interval);
+
+        const actions = readMusicActions();
+
+        for (const action of actions) {
+            if (!action.target) {
+                throw new Error(
+                    "Bitte für jede Musikaktion einen Zielnamen eingeben."
+                );
+            }
+
+            if (
+                !Number.isInteger(action.every_beats) ||
+                action.every_beats < 1 ||
+                action.every_beats > 256
+            ) {
+                throw new Error(
+                    "Der Beat-Abstand einer Musikaktion muss zwischen 1 und 256 liegen."
+                );
+            }
+        }
+
+        const data = {
+            beat: {
+                source: $("beat-source").value,
+                sensitivity: Number($("beat-sensitivity").value),
+                min_interval_ms: interval,
+                eq_weights: readEQWeights()
+            },
+            show: {
+                enabled: $("music-enabled").checked,
+                actions
+            }
+        };
+
+        const result = await api("/api/music/config", {
+            method: "POST",
+            body: JSON.stringify(data)
+        });
+
+        if (result.success === false) {
+            throw new Error(result.error || "Einstellungen konnten nicht gespeichert werden.");
+        }
+
+        musicError.textContent = "Einstellungen gespeichert.";
+        return result;
+    }
+
+    // Konfiguration laden
+    async function loadMusicConfig() {
+        try {
+            const result = await api("/api/music/config");
+            const beat = result.beat || {};
+            const show = result.show || {};
+
+            $("beat-source").value = beat.source || "bass";
+
+            const sensitivity = Number(beat.sensitivity ?? 150);
+            $("beat-sensitivity").value =
+                Math.max(1, Math.min(350, sensitivity));
+
+            $("sensitivity-value").textContent =
+                `${$("beat-sensitivity").value} %`;
+
+            const interval = Number(beat.min_interval_ms ?? 120);
+            $("beat-min-interval").value =
+                Math.max(10, Math.min(2000, interval));
+
+            $("music-enabled").checked = Boolean(show.enabled);
+
+            const weights = Array.isArray(beat.eq_weights)
+                ? beat.eq_weights
+                : defaultEqWeights;
+
+            renderEQControls(weights);
+
+            musicActions.replaceChildren();
+
+            const actions = Array.isArray(show.actions)
+                ? show.actions
+                : [];
+
+            actions.forEach(createMusicAction);
+
+            musicError.textContent = "";
+        } catch (error) {
+            showError(musicError, error);
+        }
+    }
+
+    $("beat-sensitivity").addEventListener("input", event => {
+        $("sensitivity-value").textContent = `${event.target.value} %`;
+    });
+
+    $("beat-min-interval").addEventListener("change", event => {
+        let value = Number(event.target.value);
+
+        if (!Number.isFinite(value)) value = 120;
+
+        event.target.value = String(
+            Math.max(10, Math.min(2000, Math.round(value)))
+        );
+    });
+
+    $("music-add-action").addEventListener("click", () => {
+        createMusicAction();
+    });
+
+    $("music-save").addEventListener("click", async () => {
+        try {
+            await saveMusicConfig();
+        } catch (error) {
+            showError(musicError, error);
+        }
+    });
+
+    $("music-start").addEventListener("click", async () => {
+        try {
+            // Erst die aktuellen Einstellungen speichern
+            await saveMusicConfig();
+
+            // Die Beat-Erkennung benötigt eine laufende Audioquelle
+            const audio = await api("/api/audio/status");
+
+            if (!audio.running) {
+                throw new Error(
+                    "Bitte zuerst die Audioquelle starten."
+                );
+            }
+
+            const result = await api("/api/music/start", {
+                method: "POST"
+            });
+
+            if (result.success === false) {
+                throw new Error(
+                    result.error || "Music Sync konnte nicht gestartet werden."
+                );
+            }
+
+            musicError.textContent = "";
+            await pollMusicStatus();
+        } catch (error) {
+            showError(musicError, error);
+        }
+    });
+
+    $("music-stop").addEventListener("click", async () => {
+        try {
+            const result = await api("/api/music/stop", {
+                method: "POST"
+            });
+
+            if (result.success === false) {
+                throw new Error(
+                    result.error || "Music Sync konnte nicht gestoppt werden."
+                );
+            }
+
+            musicError.textContent = "";
+            await pollMusicStatus();
+        } catch (error) {
+            showError(musicError, error);
+        }
+    });
+
+    async function pollMusicStatus() {
+        try {
+            const result = await api("/api/music/status");
+            const beat = result.beat || {};
+            const show = result.show || {};
+
+            $("music-beat-count").textContent = beat.beat_count ?? 0;
+
+            const bpm = Number(beat.bpm ?? 0);
+            $("music-bpm").textContent =
+                Number.isFinite(bpm) && bpm > 0
+                    ? Math.round(bpm)
+                    : "–";
+
+            $("music-status").textContent = show.running
+                ? "Music Sync: aktiv"
+                : beat.running
+                    ? "Beat-Erkennung: aktiv"
+                    : "Music Sync: gestoppt";
+
+            if (show.last_error) {
+                musicError.textContent = show.last_error;
+            } else if (beat.error) {
+                musicError.textContent = beat.error;
+            }
+        } catch (error) {
+            showError(musicError, error);
+        }
+    }
+
+    // Initialisieren
+    renderEQControls();
+    loadDevices();
+    loadMusicConfig();
+    pollAudioStatus();
+    pollMusicStatus();
+
+    // Polling unabhängig vom Start-Button aktiv halten.
+    // So wird auch ein bereits laufender Audio-Stream angezeigt.
+    audioPollTimer = setInterval(pollAudioStatus, 200);
+    musicPollTimer = setInterval(pollMusicStatus, 250);
+})();
+</script>
+{% endblock %}

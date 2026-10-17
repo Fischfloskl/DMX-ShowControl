@@ -5,6 +5,7 @@ import webview
 from dmx_manager import DMXManager
 from reference_checker import ReferenceChecker
 from sequence_manager import SequenceManager
+from app import midi_manager
 import sys
 from pathlib import Path
 import webbrowser
@@ -113,7 +114,10 @@ webview.create_window(
 
 
 try:
-
+    if settings.midi_input_port:
+        midi_manager.connect(
+                settings.midi_input_port or ""
+            )
     webview.start()
 
 finally:
