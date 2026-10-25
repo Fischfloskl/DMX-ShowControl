@@ -172,7 +172,9 @@ Additional DMX interfaces and hardware may be supported in the future.
 * [ ] Finish English UI translation
 * [x] Release standalone Windows `.exe`
 * [ ] Improve MIDI integration
-* [ ] Add MIDI Learn
+* [x] Add MIDI
+* [ ] Add 3D-Stage-Editor
+* [ ] Add Music Recognition by Beat
 * [ ] Improve DMX fixture support
 * [ ] Improve the song/show workflow
 * [ ] Improve mobile-friendly remote control
