@@ -23,11 +23,12 @@ It combines **scenes, sequences, triggers, timing and DMX control** in one appli
 * 🎬 **Scenes** for predefined lighting states
 * 🔀 **Sequences** for automated scene playback
 * ⌨️ **Keyboard triggers**
+* 🖥️ **3D-Builder** *(in development)*
 * ⏱️ **Timing tools** for synchronizing events with music
 * 🎵 **Song-based show control**
 * 🔌 **Serial DMX hardware support**
 * 🌐 **Web-based control interface**
-* 🎹 **MIDI support** *(in development)*
+* 🎹 **MIDI support**
 * 📱 **Remote/mobile control** *(in development)*
 
 ---
