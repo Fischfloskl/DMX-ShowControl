@@ -10,141 +10,223 @@
 href="{{ url_for('static', filename='css/style.css') }}">
 
 <style>
-    @media(max-width: 1430px){
-        .navbar {
-
-            display:flex;
-
-            justify-content:flex-start;
-
-            align-items:center;
-
-        }
-
-        .qr_code {
-            width: 70px;
-        }
-
-
-        .menu-button {
-
-            display:block;
-
-            order:1;
-
-            margin:0;
-
-            padding:10px;
-
-        }
-
-
-        .logo {
-
-            display:none;
-
-        }
-
-
-        .nav-links {
-
-            order:2;
-
-        }
-
-
-        .mode-tabs {
-
-            order:3;
-
-            margin-left:auto;
-
-        }
-
-
-        .nav-links {
-
-
-            position:absolute;
-
-
-            top:58px;
-
-
-            left:0;
-
-
-            width:100%;
-
-
-            background:#292929;
-
-
-            flex-direction:column;
-
-
-            align-items:flex-start;
-
-
-            max-height:0;
-
-
-            overflow:hidden;
-
-
-            opacity:0;
-
-
-            transition:
-
-                max-height .35s,
-                opacity .25s;
-
-
-            z-index:1000;
-
-        }
-
-
-
-        .nav-links.active {
-
-
-            max-height:600px;
-
-            opacity:1;
-
-        }
-
-
-
-        .nav-links a {
-
-
-            width:100%;
-
-
-            border-bottom:
-
-                1px solid #444;
-
-        }
-
-        .page {
-
-            padding:12px;
-
-        }
-
-
-        h1 {
-
-            font-size:28px;
-
-        }
-
-
+    
+/* Main application menu */
+.desktop-navbar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    min-height: 54px;
+    padding: 0 18px;
+    background: #202329;
+    color: #f2f2f2;
+    border-bottom: 1px solid #3b3f47;
+    position: relative;
+    z-index: 2000;
+    overflow: visible;
+}
+.app-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    font-weight: 600;
+}
+
+.app-brand img {
+    display: block;
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+}
+
+.app-brand a {
+    display: flex;
+}
+
+.desktop-menu {
+    display: flex;
+    align-items: stretch;
+    align-self: stretch;
+    gap: 2px;
+}
+
+.menu-group {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+}
+
+.menu-trigger {
+    border: 0;
+    border-radius: 4px;
+    padding: 0 13px;
+    color: #e8e8e8;
+    background: #262930;
+    font: inherit;
+    cursor: pointer;
+}
+
+.menu-trigger:hover,
+.menu-group.open > .menu-trigger,
+.menu-trigger:focus-visible {
+    background: #383d46;
+    outline: none;
+}
+
+.dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 220px;
+    padding: 5px;
+    background: #292d34;
+    border: 1px solid #454a54;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px #0006;
+    z-index: 3000;
+}
+
+.menu-group:hover > .dropdown,
+.menu-group:focus-within > .dropdown,
+.menu-group.open > .dropdown {
+    display: block;
+}
+
+.dropdown a,
+.dropdown-action {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 4px;
+    text-align: left;
+    text-decoration: none;
+    color: #ededed;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+
+.dropdown a:hover,
+.dropdown-action:hover {
+    background: #414752;
+    color: white;
+}
+
+.menu-separator {
+    height: 1px;
+    margin: 5px 3px;
+    background: #454a54;
+}
+
+.dropdown .danger {
+    color: #ff8585;
+}
+
+.mode-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.mode-tabs a {
+    padding: 8px 11px;
+    border-radius: 4px;
+    color: #ddd;
+    text-decoration: none;
+}
+
+.mode-tabs a:hover,
+.mode-tabs a.active {
+    background: #414752;
+    color: white;
+}
+
+.mode-indicator {
+    margin-right: 8px;
+    color: #aeb6c2;
+    font-size: 11px;
+    letter-spacing: 1px;
+}
+
+.mobile-menu-button,
+.mobile-menu-panel {
+    display: none;
+}
+
+.problem-count {
+    color: #f0a52b;
+    margin-left: 8px;
+}
+
+@media (max-width: 1050px) {
+    .desktop-navbar {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 10px 12px;
     }
+
+    .desktop-menu {
+        display: none;
+    }
+
+    .mode-tabs {
+        margin-left: auto;
+    }
+
+    .mobile-menu-button {
+        display: block;
+        padding: 8px 12px;
+        border: 1px solid #454a54;
+        border-radius: 4px;
+        color: white;
+        background: #30353d;
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .mobile-menu-panel {
+        display: none;
+    }
+
+    .mobile-menu-panel.active {
+        display: flex;
+        flex-direction: column;
+
+        position: fixed;
+        top: var(--mobile-menu-top, 64px);
+        left: 0;
+        right: 0;
+
+        max-height: 75vh;
+        overflow-y: auto;
+        padding: 8px;
+        box-sizing: border-box;
+
+        background: #292d34;
+        border: 1px solid #454a54;
+        box-shadow: 0 8px 24px #0006;
+
+        z-index: 99999;
+    }
+
+    .mobile-menu-panel a {
+        padding: 12px;
+        color: #eee;
+        text-decoration: none;
+        border-bottom: 1px solid #414752;
+    }
+
+    .mobile-menu-panel a:hover {
+        background: #414752;
+    }
+}
+
 </style>
 
 <link rel="icon"
@@ -159,131 +241,135 @@ DMX-ShowControl
 <body>
 
 
-<nav class="navbar">
 
-<div class="menu-button"
-onclick="toggleMenu()">
+<nav class="navbar desktop-navbar">
+    <div class="app-brand">
+        <a href="/">
+            <img
+                src="{{ url_for('static', filename='logo.png') }}"
+                alt="DMX-ShowControl"
+            >
+        </a>
+        <a href="/" style="color: #ffffff;text-decoration: none;">DMX-ShowControl</a>
+        {% if problems %}
+        <a href="/" style="color: #d97706;text-decoration: none;">
+            <b>⚠{{ problems|length }}</b>
+        </a>
+        {% endif %}
+    </div>
 
-☰
+    <div class="desktop-menu" id="desktopMenu">
 
-</div>
+        <div class="menu-group">
+            <button class="menu-trigger" type="button"
+                    aria-haspopup="true" aria-expanded="false">
+                File
+            </button>
+            <div class="dropdown">
+                <a href="/">Dashboard</a>
+                <div class="menu-separator"></div>
+                <a href="/settings">Settings</a>
+            </div>
+        </div>
 
-<div class="logo">
+        <div class="menu-group">
+            <button class="menu-trigger" type="button"
+                    aria-haspopup="true" aria-expanded="false">
+                Show
+            </button>
+            <div class="dropdown">
+                <a href="/set-mode/show">Show Mode</a>
+                <a href="/set-mode/edit">Edit Mode</a>
+                <div class="menu-separator"></div>
+                <button type="button" class="dropdown-action danger" style="color: rgb(255, 74, 74);
+                        onclick="clearDMX()">
+                    Clear DMX
+                </button>
+            </div>
+        </div>
 
-<a href="/">
-<img src="{{ url_for('static', filename='logo.png') }}">
+        <div class="menu-group">
+            <button class="menu-trigger" type="button"
+                    aria-haspopup="true" aria-expanded="false">
+                Programming
+            </button>
+            <div class="dropdown">
+                <a href="/triggers">Triggers</a>
+                <a href="/sequences">Sequences</a>
+                <a href="/fades">Fades</a>
+                <a href="/strobes">Strobes</a>
+                <a href="/scenes">Scenes</a>
+            </div>
+        </div>
 
-</a>
+        <div class="menu-group">
+            <button class="menu-trigger" type="button"
+                    aria-haspopup="true" aria-expanded="false">
+                Tools
+            </button>
+            <div class="dropdown">
+                <a href="/devices">Devices</a>
+                <a href="/visualizer">3D Visualizer</a>
+                <a href="/timing">Timing</a>
+            </div>
+        </div>
 
-</div>
+        <div class="menu-group">
+            <button class="menu-trigger" type="button"
+                    aria-haspopup="true" aria-expanded="false">
+                Help
+            </button>
+            <div class="dropdown">
+                <button type="button" class="dropdown-action"
+                        onclick="window.open('https://github.com/Fischfloskl/DMX-ShowControl/', '_blank')">
+                    About DMX-ShowControl
+                </button>
+            </div>
+        </div>
+    </div>
 
+    <div class="mode-tabs">
+        <span class="mode-indicator">
+            {{ mode|upper }} MODE
+        </span>
 
+        <a href="/set-mode/show"
+           {% if mode == "show" %}class="active"{% endif %}>
+            Show
+        </a>
 
+        <a href="/set-mode/edit"
+           {% if mode == "edit" %}class="active"{% endif %}>
+            Edit
+        </a>
+    </div>
 
-<div class="nav-links"
-id="mobileMenu">
-
-<a href="/" 
-{% if request.path == "/" %}
-class="active"
-{% endif %}>
-Dashboard
-{% if problems %}
-<span style="color: #d97706;">
-    <b>⚠{{ problems|length }}</b>
-</span>
-{% endif %}
-</a>
-
-<a href="/triggers"
-{% if request.path == "/triggers" %}
-class="active"
-{% endif %}>
-Triggers
-</a>
-
-<a href="/sequences"
-{% if request.path == "/sequences" %}
-class="active"
-{% endif %}>
-Sequences
-</a>
-
-<a href="/fades"
-{% if request.path == "/fades" %}
-class="active"
-{% endif %}>
-Fades
-</a>
-
-<a href="/strobes"
-{% if request.path == "/strobes" %}
-class="active"
-{% endif %}>
-Strobes
-</a>
-
-<a href="/scenes"
-{% if request.path == "/scenes" %}
-class="active"
-{% endif %}>
-Scenes
-</a>
-
-<a href="/devices"
-{% if request.path == "/devices" %}
-class="active"
-{% endif %}>
-Devices
-</a>
-
-<a href="/visualizer"
-{% if request.path == "/visualizer" %}
-class="active"
-{% endif %}>
-    3D Visualizer
-</a>
-
-<a href="/timing"
-{% if request.path == "/timing" %}
-class="active"
-{% endif %}>
-Timing
-</a>
-
-<a href="/settings"
-{% if request.path == "/settings" %}
-class="active"
-{% endif %}>
-Settings
-</a>
-
-</div>
-
-<div class="mode-tabs">
-
-<a href="#" onclick="clearDMX();return false;" style="background: #be0000;margin-right: 20px;">
-Clear DMX
-</a>
-
-
-<a href="/set-mode/show"
-{% if mode == "show" %}
-class="active"
-{% endif %}>
-Show-Mode
-
-</a>
-<a href="/set-mode/edit"
-{% if mode == "edit" %}
-class="active"
-{% endif %}>
-Edit-Mode
-</a>
-
-</div>
-
+    <button class="mobile-menu-button" type="button"
+            id="mobileMenuButton" aria-expanded="false">
+        ☰ Menu
+    </button>
 </nav>
+
+<div class="mobile-menu-panel" id="mobileMenuPanel">
+    <a href="/">Dashboard
+        {% if problems %}
+            <span class="problem-count">⚠ {{ problems|length }}</span>
+        {% endif %}
+    </a>
+
+    <a href="/triggers">Triggers</a>
+    <a href="/sequences">Sequences</a>
+    <a href="/fades">Fades</a>
+    <a href="/strobes">Strobes</a>
+    <a href="/scenes">Scenes</a>
+    <a href="/devices">Devices</a>
+    <a href="/visualizer">3D Visualizer</a>
+    <a href="/timing">Timing</a>
+    <a href="/settings">Settings</a>
+    <button type="button" class="dropdown-action danger" style="color: rgb(255, 74, 74);
+            onclick="clearDMX()">Clear DMX</button>
+</div>
+
 
 
 
@@ -293,21 +379,6 @@ Edit-Mode
 {% endblock %}
 
 </div>
-
-
-
-<script>
-
-function toggleMenu(){
-
-document
-.getElementById("mobileMenu")
-.classList
-.toggle("active");
-
-}
-
-</script>
 
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
@@ -334,6 +405,117 @@ socket.on(
 function clearDMX(){
     fetch("/dmx/clear");
 }
+</script>
+<script>
+ 
+document.addEventListener("DOMContentLoaded", () => {
+    const groups = document.querySelectorAll(".menu-group");
+
+    const mobileButton = document.getElementById("mobileMenuButton");
+    const mobilePanel = document.getElementById("mobileMenuPanel");
+
+    // Desktop menus
+    groups.forEach(group => {
+        const trigger = group.querySelector(".menu-trigger");
+
+        trigger.addEventListener("click", event => {
+            event.stopPropagation();
+
+            const shouldOpen = !group.classList.contains("open");
+
+            groups.forEach(other => {
+                other.classList.remove("open");
+                other.querySelector(".menu-trigger")
+                    .setAttribute("aria-expanded", "false");
+            });
+
+            if (shouldOpen) {
+                group.classList.add("open");
+                trigger.setAttribute("aria-expanded", "true");
+            }
+        });
+
+        group.addEventListener("mouseenter", () => {
+            groups.forEach(other => {
+                if (other !== group) {
+                    other.classList.remove("open");
+                    other.querySelector(".menu-trigger")
+                        .setAttribute("aria-expanded", "false");
+                }
+            });
+
+            trigger.setAttribute("aria-expanded", "true");
+        });
+
+        group.addEventListener("mouseleave", () => {
+            if (!group.classList.contains("open")) {
+                trigger.setAttribute("aria-expanded", "false");
+            }
+        });
+    });
+
+    // Close desktop menus when clicking outside
+    document.addEventListener("click", event => {
+        if (!event.target.closest(".menu-group")) {
+            groups.forEach(group => {
+                group.classList.remove("open");
+                group.querySelector(".menu-trigger")
+                    .setAttribute("aria-expanded", "false");
+            });
+        }
+    });
+
+    // Position the mobile menu directly below the navbar
+    function positionMobileMenu() {
+        if (!mobileButton || !mobilePanel) return;
+
+        const navbar = mobileButton.closest(".desktop-navbar");
+        if (!navbar) return;
+
+        const rect = navbar.getBoundingClientRect();
+
+        mobilePanel.style.setProperty(
+            "--mobile-menu-top",
+            `${rect.bottom}px`
+        );
+    }
+
+    // Mobile menu: one click handler only
+    if (mobileButton && mobilePanel) {
+        mobileButton.addEventListener("click", () => {
+            const isOpen = mobilePanel.classList.toggle("active");
+
+            mobileButton.setAttribute(
+                "aria-expanded",
+                String(isOpen)
+            );
+
+            if (isOpen) {
+                positionMobileMenu();
+            }
+        });
+
+        window.addEventListener("resize", () => {
+            if (mobilePanel.classList.contains("active")) {
+                positionMobileMenu();
+            }
+        });
+
+        window.addEventListener("scroll", () => {
+            if (mobilePanel.classList.contains("active")) {
+                positionMobileMenu();
+            }
+        }, true);
+
+        mobilePanel.querySelectorAll("a").forEach(link => {
+            link.addEventListener("click", () => {
+                mobilePanel.classList.remove("active");
+                mobileButton.setAttribute("aria-expanded", "false");
+            });
+        });
+    }
+});
+
 </script>
 
 </body>

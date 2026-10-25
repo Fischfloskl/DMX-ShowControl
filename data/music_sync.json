@@ -1,12 +1,12 @@
 {
     "enabled": true,
+    "every_beats": 4,
     "actions": [
         {
             "id": 1,
             "enabled": true,
             "type": "scene",
             "target": "pos1",
-            "every_beats": 4,
             "phase": 0
         },
         {
@@ -14,7 +14,6 @@
             "enabled": true,
             "type": "scene",
             "target": "pos4",
-            "every_beats": 4,
             "phase": 1
         },
         {
@@ -22,7 +21,6 @@
             "enabled": true,
             "type": "scene",
             "target": "pos3",
-            "every_beats": 4,
             "phase": 2
         },
         {
@@ -30,7 +28,6 @@
             "enabled": true,
             "type": "scene",
             "target": "pos4",
-            "every_beats": 4,
             "phase": 3
         }
     ]

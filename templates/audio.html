@@ -178,7 +178,7 @@
     </div>
 
     <label class="checkbox-setting" for="music-enabled">
-        <input type="checkbox" id="music-enabled">
+        <input type="checkbox" id="music-enabled" class="checkbox">
         Musikaktionen aktivieren
     </label>
 </div>
@@ -204,6 +204,24 @@
         Aktionen werden anhand der erkannten Beats ausgelöst.
         Der Zielname muss exakt dem Namen in DMXShowControl entsprechen.
     </p>
+    
+    <div class="setting music-global-interval">
+        <label for="music-every-beats">Every N beats</label>
+        <input
+            id="music-every-beats"
+            type="number"
+            min="1"
+            max="256"
+            step="1"
+            value="1"
+        >
+        <small>
+            Shared beat interval for all enabled actions.
+        </small>
+    </div>
+
+    <div id="music-actions"></div>
+
 
     <div id="music-actions"></div>
 
@@ -271,17 +289,6 @@
     justify-content: space-between;
     font-size: 0.85em;
     opacity: 0.7;
-}
-
-.checkbox-setting {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 18px;
-}
-
-.checkbox-setting input {
-    width: auto;
 }
 
 .music-stats {
@@ -354,6 +361,68 @@
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
+}
+
+/* Custom toggle checkbox */
+input[type="checkbox"].checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+
+    display: inline-block;
+    flex: 0 0 50px;
+
+    width: 50px !important;
+    min-width: 50px;
+    height: 26px !important;
+
+    margin: 0;
+    padding: 0;
+
+    position: relative;
+    box-sizing: border-box;
+
+    border: 1px solid #666;
+    border-radius: 20px;
+
+    background: #555;
+    cursor: pointer;
+
+    transition: background 0.2s, border-color 0.2s;
+}
+
+input[type="checkbox"].checkbox::before {
+    content: "";
+    position: absolute;
+
+    width: 20px;
+    height: 20px;
+
+    top: 2px;
+    left: 2px;
+
+    border-radius: 50%;
+    background: #fff;
+
+    transition: transform 0.2s;
+}
+
+input[type="checkbox"].checkbox:checked {
+    background: #00aa55;
+    border-color: #00aa55;
+}
+
+input[type="checkbox"].checkbox:checked::before {
+    transform: translateX(24px);
+}
+
+input[type="checkbox"].checkbox:focus-visible {
+    outline: 2px solid #4fc3f7;
+    outline-offset: 3px;
+}
+
+input[type="checkbox"].checkbox:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .music-action .action-enabled {
@@ -709,9 +778,10 @@
         every.value = action.every_beats ?? 1;
         everyLabel.appendChild(every);
 
+        
         const phaseLabel = document.createElement("label");
         phaseLabel.appendChild(
-            document.createTextNode("Phase (0 bis N−1)")
+            document.createTextNode("Phase (0 to N−1)")
         );
 
         const phase = document.createElement("input");
@@ -722,8 +792,11 @@
         phaseLabel.appendChild(phase);
 
         function validatePhase() {
-            const n = Math.max(1, Math.min(256, Number(every.value) || 1));
-            every.value = String(n);
+            const n = Math.max(
+                1,
+                Math.min(256, Number($("music-every-beats").value) || 1)
+            );
+
             phase.max = String(n - 1);
 
             const currentPhase = Number(phase.value) || 0;
@@ -732,15 +805,16 @@
             );
         }
 
-        every.addEventListener("change", validatePhase);
         phase.addEventListener("change", validatePhase);
         validatePhase();
 
+
         const enabledLabel = document.createElement("label");
-        enabledLabel.className = "action-enabled";
+        enabledLabel.className = "action-enabled checkbox-setting";
 
         const enabled = document.createElement("input");
         enabled.type = "checkbox";
+        enabled.className = "checkbox action-enabled";
         enabled.checked = action.enabled !== false;
 
         enabledLabel.append(
@@ -757,7 +831,6 @@
         row.append(
             typeLabel,
             targetLabel,
-            everyLabel,
             phaseLabel,
             enabledLabel,
             remove
@@ -766,6 +839,7 @@
         musicActions.appendChild(row);
     }
 
+    
     function readMusicActions() {
         return [...musicActions.querySelectorAll(".music-action")]
             .map((row, index) => {
@@ -775,12 +849,12 @@
                     id: index + 1,
                     type: fields[0].value,
                     target: fields[1].value.trim(),
-                    every_beats: Number(fields[2].value),
-                    phase: Number(fields[3].value),
-                    enabled: fields[4].checked
+                    phase: Number(fields[2].value),
+                    enabled: fields[3].checked
                 };
             });
     }
+
 
     // Konfiguration speichern
     async function saveMusicConfig() {
@@ -796,25 +870,37 @@
         interval = Math.max(10, Math.min(2000, Math.round(interval)));
         intervalInput.value = String(interval);
 
-        const actions = readMusicActions();
+        
+        const everyInput = $("music-every-beats");
+        let everyBeats = Number(everyInput.value);
 
+        if (!Number.isInteger(everyBeats)) {
+            everyBeats = 1;
+        }
+
+        everyBeats = Math.max(1, Math.min(256, everyBeats));
+        everyInput.value = String(everyBeats);
+
+        const actions = readMusicActions();
+        
         for (const action of actions) {
             if (!action.target) {
                 throw new Error(
-                    "Bitte für jede Musikaktion einen Zielnamen eingeben."
+                    "Please enter a target name for every music action."
                 );
             }
 
             if (
-                !Number.isInteger(action.every_beats) ||
-                action.every_beats < 1 ||
-                action.every_beats > 256
+                !Number.isInteger(action.phase) ||
+                action.phase < 0 ||
+                action.phase >= everyBeats
             ) {
                 throw new Error(
-                    "Der Beat-Abstand einer Musikaktion muss zwischen 1 und 256 liegen."
+                    `Each phase must be between 0 and ${everyBeats - 1}.`
                 );
             }
         }
+
 
         const data = {
             beat: {
@@ -825,6 +911,7 @@
             },
             show: {
                 enabled: $("music-enabled").checked,
+                every_beats: everyBeats,
                 actions
             }
         };
@@ -848,6 +935,14 @@
             const result = await api("/api/music/config");
             const beat = result.beat || {};
             const show = result.show || {};
+            
+            const everyBeats = Number(show.every_beats ?? 1);
+            $("music-every-beats").value = String(
+                Math.max(
+                    1,
+                    Math.min(256, Number.isFinite(everyBeats) ? everyBeats : 1)
+                )
+            );
 
             $("beat-source").value = beat.source || "bass";
 
@@ -897,6 +992,31 @@
             Math.max(10, Math.min(2000, Math.round(value)))
         );
     });
+
+    
+    $("music-every-beats").addEventListener("change", event => {
+        let value = Number(event.target.value);
+
+        if (!Number.isInteger(value)) {
+            value = 1;
+        }
+
+        value = Math.max(1, Math.min(256, value));
+        event.target.value = String(value);
+
+        musicActions.querySelectorAll(".music-action").forEach(row => {
+            const fields = row.querySelectorAll("input, select");
+            const phase = fields[2];
+
+            phase.max = String(value - 1);
+
+            const currentPhase = Number(phase.value) || 0;
+            phase.value = String(
+                Math.max(0, Math.min(value - 1, currentPhase))
+            );
+        });
+    });
+
 
     $("music-add-action").addEventListener("click", () => {
         createMusicAction();

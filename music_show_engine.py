@@ -30,6 +30,7 @@ class MusicShowEngine:
 
         self._config = {
             "enabled": False,
+            "every_beats": 1,
             "actions": [],
         }
 
@@ -41,6 +42,7 @@ class MusicShowEngine:
 
         self.load()
 
+    
     def load(self):
         os.makedirs("data", exist_ok=True)
 
@@ -52,18 +54,59 @@ class MusicShowEngine:
             with open(self.CONFIG_FILE, "r", encoding="utf-8") as file:
                 data = json.load(file)
 
-            if isinstance(data, dict):
-                actions = data.get("actions", [])
-                if not isinstance(actions, list):
-                    actions = []
+            if not isinstance(data, dict):
+                return
 
-                self._config = {
-                    "enabled": bool(data.get("enabled", False)),
-                    "actions": actions,
-                }
+            actions = data.get("actions", [])
+            if not isinstance(actions, list):
+                actions = []
+
+            # Migrate the old per-action interval to one global interval.
+            global_every = data.get("every_beats")
+            if global_every is None:
+                global_every = next(
+                    (
+                        action.get("every_beats", 1)
+                        for action in actions
+                        if isinstance(action, dict)
+                    ),
+                    1,
+                )
+
+            try:
+                global_every = max(1, min(256, int(global_every)))
+            except (TypeError, ValueError):
+                global_every = 1
+
+            migrated_actions = []
+            for action in actions:
+                if not isinstance(action, dict):
+                    continue
+
+                try:
+                    phase = int(action.get("phase", 0))
+                except (TypeError, ValueError):
+                    phase = 0
+
+                # A phase must fit inside the global interval.
+                phase = max(0, min(global_every - 1, phase))
+
+                migrated_action = dict(action)
+                migrated_action.pop("every_beats", None)
+                migrated_action["phase"] = phase
+                migrated_actions.append(migrated_action)
+
+            self._config = {
+                "enabled": bool(data.get("enabled", False)),
+                "every_beats": global_every,
+                "actions": migrated_actions,
+            }
+
+            # Persist the migrated format.
+            self.save()
 
         except (OSError, json.JSONDecodeError) as exc:
-            print(f"Music-Sync-Konfiguration konnte nicht geladen werden: {exc}")
+            print(f"Could not load Music Sync configuration: {exc}")
 
     def save(self):
         os.makedirs("data", exist_ok=True)
@@ -71,6 +114,7 @@ class MusicShowEngine:
         with self._lock:
             data = {
                 "enabled": bool(self._config["enabled"]),
+                "every_beats": int(self._config["every_beats"]),
                 "actions": self._config["actions"],
             }
 
@@ -81,62 +125,74 @@ class MusicShowEngine:
 
             os.replace(temp_file, self.CONFIG_FILE)
 
+
     def get_config(self):
         with self._lock:
             return json.loads(json.dumps(self._config))
 
+    
     def set_config(self, data):
         if not isinstance(data, dict):
-            raise ValueError("Ungültige Konfiguration.")
+            raise ValueError("Invalid configuration.")
 
         actions = data.get("actions", [])
         if not isinstance(actions, list):
-            raise ValueError("actions muss eine Liste sein.")
+            raise ValueError("'actions' must be a list.")
+
+        try:
+            global_every = int(data.get("every_beats", 1))
+        except (TypeError, ValueError):
+            raise ValueError("'every_beats' must be an integer.")
+
+        if not 1 <= global_every <= 256:
+            raise ValueError("'every_beats' must be between 1 and 256.")
 
         normalized = []
 
         for index, action in enumerate(actions, start=1):
             if not isinstance(action, dict):
-                raise ValueError("Jede Aktion muss ein Objekt sein.")
+                raise ValueError("Each action must be an object.")
 
             action_type = str(action.get("type", "scene"))
             if action_type not in ("scene", "fade", "sequence"):
-                raise ValueError(f"Ungültiger Aktionstyp: {action_type}")
+                raise ValueError(f"Invalid action type: {action_type}")
 
             target = str(action.get("target", "")).strip()
-            every_beats = int(action.get("every_beats", 1))
-            phase = int(action.get("phase", 0))
 
-            if not target:
-                raise ValueError(f"Aktion {index}: Ziel fehlt.")
-
-            if not 1 <= every_beats <= 256:
+            try:
+                phase = int(action.get("phase", 0))
+                action_id = int(action.get("id", index))
+            except (TypeError, ValueError):
                 raise ValueError(
-                    f"Aktion {index}: every_beats muss zwischen 1 und 256 liegen."
+                    f"Action {index}: ID and phase must be integers."
                 )
 
-            if not 0 <= phase < every_beats:
+            if not target:
+                raise ValueError(f"Action {index}: target is required.")
+
+            if not 0 <= phase < global_every:
                 raise ValueError(
-                    f"Aktion {index}: phase muss zwischen 0 und "
-                    f"{every_beats - 1} liegen."
+                    f"Action {index}: phase must be between "
+                    f"0 and {global_every - 1}."
                 )
 
             normalized.append({
-                "id": int(action.get("id", index)),
+                "id": action_id,
                 "enabled": bool(action.get("enabled", True)),
                 "type": action_type,
                 "target": target,
-                "every_beats": every_beats,
                 "phase": phase,
             })
 
         with self._lock:
             self._config = {
                 "enabled": bool(data.get("enabled", False)),
+                "every_beats": global_every,
                 "actions": normalized,
             }
 
         self.save()
+
 
     def get_state(self):
         with self._lock:
@@ -202,11 +258,13 @@ class MusicShowEngine:
             with self._lock:
                 self._state["running"] = False
 
+    
     def _dispatch_beat(self, beat_count):
         with self._lock:
             if not self._config["enabled"]:
                 return
 
+            every = self._config["every_beats"]
             actions = [
                 dict(action)
                 for action in self._config["actions"]
@@ -214,7 +272,6 @@ class MusicShowEngine:
             ]
 
         for action in actions:
-            every = action["every_beats"]
             phase = action["phase"]
 
             if (beat_count - 1) % every != phase:
@@ -237,6 +294,7 @@ class MusicShowEngine:
                     self._state["last_error"] = (
                         f'{action["type"]} "{action["target"]}": {exc}'
                     )
+
 
     def _execute(self, action):
         action_type = action["type"]

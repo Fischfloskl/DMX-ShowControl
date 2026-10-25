@@ -192,32 +192,32 @@ Lower values make fades smoother, but increase CPU usage.
 
     <div class="form-grid">
 
-        <div>
-            <label for="midi_input_port">
-                MIDI Input Port
-            </label>
-
-            <select
-                class="btna"
-                id="midi_input_port"
-                name="midi_input_port">
-
-                <option value="">
-                    -- No MIDI input --
+            
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <select name="midi_input_port" id="midi_input_port">
+            {% for port in midi_ports %}
+                <option value="{{ port }}"
+                    {% if port == midi_input_port %}selected{% endif %}>
+                    {{ port }}
                 </option>
+            {% endfor %}
+        </select>
 
-                {% for midi_port in midi_ports %}
-                <option
-                    value="{{ midi_port }}"
-                    {% if midi_input_port == midi_port %}selected{% endif %}>
-                    {{ midi_port }}
-                </option>
-                {% endfor %}
+        <button
+            type="button"
+            class="btn-primary"
+            id="refresh-midi-ports"
+            onclick="refreshMidiPorts()">
+            ↻ Refresh
+        </button>
+    </div>
 
-            </select>
-        </div>
+    <p id="midi-refresh-status"></p>
+
+
 
     </div>
+    
 
     {% if not midi_ports %}
     <p style="color:#d99a35;">
@@ -731,85 +731,200 @@ function exportDMX(){
 </script>
 <script>
 
+
 async function loadExternalApplications() {
+    const response = await fetch("/settings/external-applications");
 
-    const response =
-        await fetch(
-            "/settings/external-applications"
-        );
+    if (!response.ok) return;
 
-    if (!response.ok)
-        return;
-
-    const applications =
-        await response.json();
-
-    const container =
-        document.getElementById(
-            "external-applications"
-        );
+    const applications = await response.json();
+    const container = document.getElementById("external-applications");
 
     container.innerHTML = "";
 
+    applications.forEach((application, index) => {
+        const row = document.createElement("div");
+        row.className = "action-card";
 
-    applications.forEach(
-        (application, index) => {
+        const title = document.createElement("strong");
+        title.textContent = application.path;
 
-            const row =
-                document.createElement(
-                    "div"
-                );
+        const editButton = document.createElement("button");
+        editButton.type = "button";
+        editButton.className = "btn-primary";
+        editButton.textContent = "Edit";
+        editButton.style.marginLeft = "12px";
 
-            row.className =
-                "action-card";
+        editButton.addEventListener("click", () => {
+            showExternalApplicationEditor(
+                row,
+                application,
+                index
+            );
+        });
 
-            row.innerHTML = `
-                <br>
-                <br>
-                <div>
-                    <strong>
-                        ${application.path} &emsp;<button class="btn-primary" onclick="" type=button>Edit</button>
-                    </strong>
-                </div>
+        const heading = document.createElement("div");
+        heading.append(title, editButton);
 
-                <div style="margin-top:10px;">
+        const status = document.createElement("div");
+        status.style.marginTop = "10px";
+        status.innerHTML = `
+            <div>${application.start_with_app
+                ? "✓ Start with application"
+                : "✗ Start with application"}</div>
+            <br>
+            <div>${application.stop_with_app
+                ? "✓ Stop with application"
+                : "✗ Stop with application"}</div>
+        `;
 
-                    ${
-                        application.start_with_app
-                        ? "✓ Start with application"
-                        : "✗ Start with application"
-                    }
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "btn-danger";
+        removeButton.textContent = "Remove";
+        removeButton.style.marginTop = "16px";
+        removeButton.addEventListener("click", () => {
+            removeExternalApplication(index);
+        });
 
-                    <br>
-                    <br>
+        row.append(
+            document.createElement("br"),
+            heading,
+            status,
+            document.createElement("br"),
+            removeButton
+        );
 
-                    ${
-                        application.stop_with_app
-                        ? "✓ Close with application"
-                        : "✗ Close with application"
-                    }
-
-                </div>
-
-                <br>
-                
-
-
-                <button
-                    type="button"
-                    class="btn-danger"
-                    onclick="removeExternalApplication(${index})"
-                >
-                    Remove
-                </button>
-
-
-            `;
-
-            container.appendChild(row);
-        }
-    );
+        container.appendChild(row);
+    });
 }
+
+function showExternalApplicationEditor(row, application, index) {
+    row.innerHTML = "";
+
+    const heading = document.createElement("h3");
+    heading.textContent = "Edit Application";
+
+    const pathLabel = document.createElement("label");
+    pathLabel.textContent = "Application path";
+
+    const pathInput = document.createElement("input");
+    pathInput.type = "text";
+    pathInput.value = application.path;
+    pathInput.style.width = "100%";
+    pathInput.style.boxSizing = "border-box";
+
+    const startLabel = document.createElement("label");
+    startLabel.style.display = "block";
+    startLabel.style.marginTop = "12px";
+
+    const startSwitch = document.createElement("input");
+    startSwitch.type = "checkbox";
+    startSwitch.className = "checkbox";
+    startSwitch.checked = Boolean(application.start_with_app);
+
+    startLabel.append(
+        startSwitch,
+        document.createTextNode(" Start with application")
+    );
+
+    const stopLabel = document.createElement("label");
+    stopLabel.style.display = "block";
+    stopLabel.style.marginTop = "12px";
+
+    const stopSwitch = document.createElement("input");
+    stopSwitch.type = "checkbox";
+    stopSwitch.className = "checkbox";
+    stopSwitch.checked = Boolean(application.stop_with_app);
+
+    stopLabel.append(
+        stopSwitch,
+        document.createTextNode(" Stop with application")
+    );
+
+    const saveButton = document.createElement("button");
+    saveButton.type = "button";
+    saveButton.className = "btn-primary";
+    saveButton.textContent = "Save";
+    saveButton.style.marginTop = "16px";
+
+    saveButton.addEventListener("click", async () => {
+        let path = pathInput.value.trim();
+
+        // Remove matching outer quotation marks.
+        if (
+            (path.startsWith('"') && path.endsWith('"')) ||
+            (path.startsWith("'") && path.endsWith("'"))
+        ) {
+            path = path.slice(1, -1).trim();
+        }
+
+        // Normalize Windows path separators.
+        path = path.replace(/\//g, "\\");
+
+        if (!path) {
+            alert("Please enter an application path.");
+            return;
+        }
+
+        saveButton.disabled = true;
+
+        try {
+            const response = await fetch(
+                "/settings/external-applications/edit",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        index: index,
+                        path: path,
+                        start_with_app: startSwitch.checked,
+                        stop_with_app: stopSwitch.checked
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                const message = await response.text();
+                alert(message || "Failed to update application.");
+                return;
+            }
+
+            await loadExternalApplications();
+        } catch (error) {
+            alert("Could not update application.");
+            console.error(error);
+        } finally {
+            saveButton.disabled = false;
+        }
+    });
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "btn-danger";
+    cancelButton.textContent = "Cancel";
+    cancelButton.style.marginLeft = "8px";
+    cancelButton.style.marginTop = "16px";
+    cancelButton.addEventListener("click", loadExternalApplications);
+
+    const editor = document.createElement("div");
+    editor.style.marginTop = "12px";
+
+    editor.append(
+        pathLabel,
+        pathInput,
+        startLabel,
+        stopLabel,
+        saveButton,
+        cancelButton
+    );
+
+    row.append(heading, editor);
+    pathInput.focus();
+}
+
 
 
 async function saveExternalApplication() {
@@ -971,15 +1086,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function updateStatus() {
         const highestText = highestNote === null
-            ? "Noch nicht gelernt"
+            ? "Not teached yet"
             : `MIDI ${highestNote}`;
 
         const lowestText = lowestNote === null
-            ? "Noch nicht gelernt"
+            ? "Not teached yet"
             : `MIDI ${lowestNote}`;
 
         statusText.textContent =
-            `Höchste Note: ${highestText} | Tiefste Note: ${lowestText}`;
+            `Highest Note: ${highestText} | Lowest Note: ${lowestText}`;
     }
 
     async function startLearning(target) {
@@ -992,14 +1107,14 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || "Lernen konnte nicht gestartet werden.");
+                throw new Error(data.error || "Teaching couldn't be started");
             }
 
             learningTarget = target;
             statusText.textContent =
                 target === "highest"
-                    ? "Bitte jetzt die HÖCHSTE Referenznote spielen …"
-                    : "Bitte jetzt die TIEFSTE Referenznote spielen …";
+                    ? "Please play the HIGHEST reference note now …"
+                    : "Please play the LOWEST reference note now …";
 
             learnHighestButton.disabled = true;
             learnLowestButton.disabled = true;
@@ -1015,13 +1130,76 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+
+        
+    async function refreshMidiPorts() {
+        const select = document.getElementById("midi_input_port");
+        const button = document.getElementById("refresh-midi-ports");
+        const status = document.getElementById("midi-refresh-status");
+
+        const previousValue = select.value;
+
+        button.disabled = true;
+        status.textContent = "Searching for MIDI inputs...";
+
+        try {
+            const response = await fetch("/settings/midi-ports");
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to refresh MIDI inputs.");
+            }
+
+            select.innerHTML = "";
+
+            if (data.ports.length === 0) {
+                const option = document.createElement("option");
+                option.value = "";
+                option.textContent = "No MIDI inputs found";
+                select.appendChild(option);
+            } else {
+                data.ports.forEach(port => {
+                    const option = document.createElement("option");
+                    option.value = port;
+                    option.textContent = port;
+                    select.appendChild(option);
+                });
+
+                // Keep the previous selection if the port still exists.
+                if (data.ports.includes(previousValue)) {
+                    select.value = previousValue;
+                } else {
+                    select.selectedIndex = 0;
+                }
+            }
+
+            status.textContent =
+                `${data.ports.length} MIDI input(s) found.`;
+        } catch (error) {
+            status.textContent = error.message;
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    const refreshMidiButton =
+        document.getElementById("refresh-midi-ports");
+
+    if (refreshMidiButton) {
+        refreshMidiButton.addEventListener(
+            "click",
+            refreshMidiPorts
+        );
+    }
+
+
     async function checkLearningStatus() {
         try {
             const response = await fetch("/settings/midi-learn/status");
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || "Status konnte nicht geladen werden.");
+                throw new Error(data.error || "Unable to load status.");
             }
 
             // Solange MIDIManager auf eine Note wartet, weiter abfragen.
@@ -1043,7 +1221,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
                 statusText.textContent =
-                    `Note erkannt: MIDI ${data.learned_note}`;
+                    `Note detected: MIDI ${data.learned_note}`;
 
                 learningTarget = null;
                 clearInterval(pollingTimer);
@@ -1082,7 +1260,7 @@ document.addEventListener("DOMContentLoaded", () => {
     saveButton.addEventListener("click", async () => {
         if (lowestNote === null || highestNote === null) {
             statusText.textContent =
-                "Bitte zuerst beide Referenznoten einlernen.";
+                "Please program both reference notes first.";
             return;
         }
 
@@ -1101,11 +1279,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || "Speichern fehlgeschlagen.");
+                throw new Error(data.error || "Save failed.");
             }
 
             statusText.textContent =
-                data.message || "MIDI-Oktavzuordnung gespeichert.";
+                data.message || "MIDI octave mapping saved.";
         } catch (error) {
             statusText.textContent = error.message;
         }

@@ -85,7 +85,8 @@
             "name": "reset 2",
             "enabled": true,
             "type": "midi",
-            "input": 127
+            "input": 127,
+            "input_name": "G8"
         }
     ]
 }

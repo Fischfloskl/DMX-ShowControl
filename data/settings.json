@@ -10,20 +10,15 @@
         "timing-global-record": "r",
         "timing-global-sim": "mediaplaypause",
         "timing-live": "arrowup",
-        "timing-mode": "live",
+        "timing-mode": "global",
         "external_applications": [
             {
                 "path": "C:\\Program Files (x86)\\Tobias Erichsen\\loopMIDI\\loopMIDI.exe",
-                "start_with_app": true,
-                "stop_with_app": true
-            },
-            {
-                "path": "C:\\\\Windows\\\\System32\\\\notepad.exe",
                 "start_with_app": false,
-                "stop_with_app": false
+                "stop_with_app": true
             }
         ],
-        "midi_input_port": "DMX-ShowCotrol MIDI 1 0",
+        "midi_input_port": "",
         "midi_note_name_highest": "G8",
         "midi_note_name_lowest": "C-2",
         "midi_note_number_highest": 127,

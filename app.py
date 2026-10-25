@@ -1818,6 +1818,12 @@ def settings_page():
     )
 
 
+@app.route("/settings/midi-ports", methods=["GET"])
+def refresh_midi_ports():
+    ports = midi_manager.get_input_names()
+    return jsonify({"ports": ports})
+
+
 @app.route("/settings/export_old")
 def export_show_old():
 
@@ -2001,7 +2007,34 @@ def import_show():
         "/settings"
     )
 
+@app.route("/settings/external-applications/edit", methods=["POST"])
+def edit_external_application():
+    data = request.get_json(silent=True) or {}
 
+    try:
+        index = int(data.get("index"))
+    except (TypeError, ValueError):
+        return "Invalid application index.", 400
+
+    path = str(data.get("path", "")).strip()
+
+    if not path:
+        return "Application path is required.", 400
+
+    applications = settings.get_external_applications()
+
+    if not 0 <= index < len(applications):
+        return "Application not found.", 404
+
+    applications[index] = {
+        "path": path,
+        "start_with_app": bool(data.get("start_with_app", False)),
+        "stop_with_app": bool(data.get("stop_with_app", False))
+    }
+
+    # Save using your existing settings persistence method.
+
+    return {"success": True}
 
 @app.route("/settings/save", methods=["POST"])
 def save_settings():

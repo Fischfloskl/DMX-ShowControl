@@ -120,13 +120,6 @@ body {
 
 }
 
-
-.navbar,
-.navbar * {
-    position: relative;
-    z-index: 10000;
-}
-
 /* Scrollbar */
 ::-webkit-scrollbar{
     scrollbar-width: thin;
