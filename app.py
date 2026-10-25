@@ -621,7 +621,7 @@ def add_fade():
 
         "id": fade_manager.next_id(),
 
-        "name": "New Fade",
+        "name": "",
 
         "duration": 1000,
 
@@ -1410,7 +1410,9 @@ def add_trigger_page():
         scenes=scene_manager.scenes,
         fades=fade_manager.fades,
         sequences=sequence_manager.sequences,
-        strobes=strobe_manager.strobes
+        strobes=strobe_manager.strobes,
+        midi_note_name=trigger_manager.midi_note_name,
+        audio_sequences=audio_sequence_manager.list_sequences(),
     )
 
 
@@ -1445,7 +1447,8 @@ def edit_trigger():
         fades=fade_manager.fades,
         sequences=sequence_manager.sequences,
         strobes=strobe_manager.strobes,
-        midi_note_name=trigger_manager.midi_note_name
+        midi_note_name=trigger_manager.midi_note_name,
+        audio_sequences=audio_sequence_manager.list_sequences()
     )
 
 
@@ -1541,6 +1544,10 @@ def save_trigger():
         "action_keys"
     )
 
+    operations = request.form.getlist(
+        "action_operation"
+    )
+
 
     actions = []
 
@@ -1562,6 +1569,15 @@ def save_trigger():
                     if k
                 ]
 
+        elif action_type == "audio_sequence":
+            if i < len(targets):
+                action["target"] = targets[i].strip()
+
+            action["operation"] = (
+                operations[i]
+                if i < len(operations) and operations[i] in ("start", "stop")
+                else "start"
+            )
 
         else:
 
@@ -2378,7 +2394,7 @@ def add_sequence():
         sequence_manager.get_next_id(),
 
         "name":
-        "Neue Sequence",
+        "",
 
         "steps":[]
 
@@ -2724,7 +2740,7 @@ def add_strobe():
 
         "id": strobe_manager.get_next_id(),
 
-        "name": "New Strobe",
+        "name": "",
 
         "cycles": 10,
 
@@ -2845,7 +2861,7 @@ def save_strobe():
 
     strobe["name"] = request.form.get(
         "name",
-        "New Strobe"
+        ""
     )
 
 

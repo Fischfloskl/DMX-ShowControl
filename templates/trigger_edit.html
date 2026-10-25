@@ -299,6 +299,10 @@ Strobe
 Sequence
 </option>
 
+<option value="audio_sequence"
+    {% if action.type == "audio_sequence" %}selected{% endif %}>
+    Audio-Sequence
+</option>
 
 <option value="keyboard"
 {% if action.type=="keyboard" %}selected{% endif %}>
@@ -362,6 +366,10 @@ onclick="setTarget(this)">
 <br>
 
 </div>
+
+<br>
+<br>
+<div class="suggestions audio-sequence-suggestions"></div>
 
 <div class="suggestions fade-suggestions">
 <br>
@@ -548,6 +556,11 @@ const strobes = [
         "{{ strobe.name }}",
     {% endfor %}
 ];
+const audioSequences = [
+    {% for seq in audio_sequences %}
+        {{ seq.name | tojson }},
+    {% endfor %}
+];
 
 
 let pressedKeys = [];
@@ -657,6 +670,9 @@ Strobe
 Sequence
 </option>
 
+<option value="audio_sequence">
+    Audio-Sequence
+</option>
 
 <option value="keyboard">
 Keyboard
@@ -724,6 +740,13 @@ Record Hotkeys
 
 </div>
 
+<div class="audio-sequence-operation" style="display:none">
+    <label>Operation</label>
+    <select name="action_operation" class="btna">
+        <option value="start">Start</option>
+        <option value="stop">Stop</option>
+    </select>
+</div>
 
 <br>
 <br>
@@ -884,169 +907,72 @@ function setTarget(button){
 
 
 
-function updateAction(select){
 
+function updateAction(select) {
+    const card = select.closest(".action-card");
+    if (!card) return;
 
-let card =
-select.closest(".action-card");
+    const type = select.value;
 
+    const keyboard = card.querySelector(".keyboard-action");
+    const target = card.querySelector(".target-box");
 
-let keyboard =
-card.querySelector(
-".keyboard-action"
-);
+    const suggestionTypes = [
+        "scene",
+        "fade",
+        "strobe",
+        "sequence",
+        "audio_sequence"
+    ];
 
+    // Alle Bereiche zuerst ausblenden
+    if (keyboard) keyboard.style.display = "none";
+    if (target) target.style.display = "none";
 
-let target =
-card.querySelector(
-".target-box"
-);
+    suggestionTypes.forEach(actionType => {
+        const box = card.querySelector(
+            `.${actionType.replace("_", "-")}-suggestions`
+        );
 
-
-let scene =
-card.querySelector(
-".scene-suggestions"
-);
-
-let fade =
-card.querySelector(
-".fade-suggestions"
-);
-
-let strobe =
-card.querySelector(
-    ".strobe-suggestions"
-);
-
-let sequence =
-card.querySelector(
-".sequence-suggestions"
-);
-
-
-
-keyboard.style.display="none";
-target.style.display="none";
-scene.style.display="none";
-fade.style.display="none";
-strobe.style.display="none";
-sequence.style.display="none";
-
-
-
-if(select.value=="keyboard"){
-
-    keyboard.style.display="block";
-
-}
-
-
-
-if(select.value=="scene"){
-
-    target.style.display="block";
-
-    scene.style.display="block";
-
-    scene.innerHTML="<br>";
-
-    scenes.forEach(name => {
-
-        scene.innerHTML += `
-        <button
-        type="button"
-        class="btna"
-        onclick="setTarget(this)">
-        ${name}
-        </button>
-        `;
-
+        if (box) box.style.display = "none";
     });
 
-}
+    if (type === "keyboard") {
+        if (keyboard) keyboard.style.display = "block";
+        return;
+    }
 
-if(select.value=="fade"){
+    if (!target) return;
 
+    target.style.display = "block";
 
-    target.style.display="block";
+    const suggestionBox = card.querySelector(
+        `.${type.replace("_", "-")}-suggestions`
+    );
 
+    if (!suggestionBox) return;
 
-    fade.style.display="block";
+    suggestionBox.style.display = "block";
+    suggestionBox.innerHTML = "";
 
+    const suggestions = {
+        scene: scenes,
+        fade: fades,
+        strobe: strobes,
+        sequence: sequences,
+        audio_sequence: audioSequences
+    };
 
-    fade.innerHTML="<br>";
-
-
-    fades.forEach(name => {
-
-
-        fade.innerHTML += `
-        <button
-        type="button"
-        class="btna"
-        onclick="setTarget(this)">
-        ${name}
-        </button>
-        `;
-
-
+    (suggestions[type] || []).forEach(name => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "btna";
+        button.textContent = name;
+        button.addEventListener("click", () => setTarget(button));
+        suggestionBox.appendChild(button);
     });
-
-
 }
 
-if(select.value=="strobe"){
-
-    target.style.display="block";
-
-    strobe.style.display="block";
-
-    strobe.innerHTML="<br>";
-
-    strobes.forEach(name => {
-
-        strobe.innerHTML += `
-
-        <button
-        type="button"
-        class="btna"
-        onclick="setTarget(this)">
-
-        ${name}
-
-        </button>
-
-        `;
-
-    });
-
-}
-
-if(select.value=="sequence"){
-
-    target.style.display="block";
-
-    sequence.style.display="block";
-
-    sequence.innerHTML="<br>";
-
-    sequences.forEach(name => {
-
-        sequence.innerHTML += `
-        <button
-        type="button"
-        class="btna"
-        onclick="setTarget(this)">
-        ${name}
-        </button>
-        `;
-
-    });
-
-}
-
-
-}
 document
 .querySelectorAll(".action-type")
 .forEach(

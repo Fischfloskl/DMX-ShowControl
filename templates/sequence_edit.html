@@ -678,7 +678,7 @@ function addStep(){
 
 
 <label>
-Dauer bis nächster Schritt
+Time until the next step
 </label>
 
 
@@ -704,12 +704,12 @@ ms
 
 
 <option value="sec" selected>
-Sekunden
+Seconds
 </option>
 
 
 <option value="min">
-Minuten
+Minutes
 </option>
 
 
@@ -721,7 +721,7 @@ Minuten
 
 
 <label>
-Aktion
+Actions
 </label>
 
 
@@ -732,7 +732,7 @@ onchange="updateStep(this)">
 
 
 <option value="scene">
-Szene
+Scene
 </option>
 
 
@@ -794,7 +794,7 @@ type="button"
 class="btn-primary"
 onclick="recordKeys(this)">
 
-Tasten aufnehmen
+Record Hotkey
 
 </button>
 
@@ -818,7 +818,7 @@ type="button"
 class="btn-danger"
 onclick="this.parentElement.remove()">
 
-Schritt entfernen
+Remove step
 
 </button>
 
@@ -901,7 +901,7 @@ button.parentElement.querySelector(
 
 
 box.innerHTML =
-"Drücke Tasten...";
+"Press the keys...";
 
 
 
@@ -1003,7 +1003,7 @@ function deleteSequence(){
 
 
 if(confirm(
-"Sequenz wirklich löschen?"
+"Do you really want to delete this sequence?"
 )){
 
 

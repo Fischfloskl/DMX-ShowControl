@@ -327,6 +327,22 @@ class TriggerEngine:
                     )
                     #self.show_controller.reset()
 
+            if action_type == "audio_sequence":
+                operation = action.get("operation", "start")
+                target = str(action.get("target", "")).strip()
+
+                if operation == "start" and target:
+                    callback = getattr(self, "audio_sequence_start", None)
+                    if callback:
+                        callback(target)
+
+                elif operation == "stop":
+                    callback = getattr(self, "audio_sequence_stop", None)
+                    if callback:
+                        callback()
+
+                continue
+
 
             # -------------------
             # Keyboard Ausgabe

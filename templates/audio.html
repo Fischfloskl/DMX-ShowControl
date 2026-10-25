@@ -1122,5 +1122,54 @@ input[type="checkbox"].checkbox:disabled {
     audioPollTimer = setInterval(pollAudioStatus, 200);
     musicPollTimer = setInterval(pollMusicStatus, 250);
 })();
+
+
+async function stopAudioSequence() {
+    const stopButtons = document.querySelectorAll(
+        '[data-action="stop-audio-sequence"]'
+    );
+
+    stopButtons.forEach(button => {
+        button.disabled = true;
+    });
+
+    try {
+        const response = await fetch("/api/audio-sequences/stop", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || result.success === false) {
+            throw new Error(
+                result.error || "Failed to stop audio sequence."
+            );
+        }
+
+        const activeStatus = document.getElementById(
+            "audio-sequence-active"
+        );
+
+        if (activeStatus) {
+            activeStatus.textContent = "No audio sequence active";
+        }
+
+        // Refresh sequence table and active status if available.
+        if (typeof loadAudioSequences === "function") {
+            await loadAudioSequences();
+        }
+    } catch (error) {
+        console.error("Could not stop audio sequence:", error);
+        alert(error.message || "Could not stop audio sequence.");
+    } finally {
+        stopButtons.forEach(button => {
+            button.disabled = false;
+        });
+    }
+}
+
 </script>
 {% endblock %}

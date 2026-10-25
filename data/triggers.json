@@ -87,6 +87,22 @@
             "type": "midi",
             "input": 127,
             "input_name": "G8"
+        },
+        {
+            "id": 7,
+            "actions": [
+                {
+                    "type": "audio_sequence",
+                    "target": "",
+                    "operation": "start"
+                }
+            ],
+            "name": "test audio",
+            "enabled": true,
+            "type": "keyboard",
+            "keys": [
+                "a"
+            ]
         }
     ]
 }
