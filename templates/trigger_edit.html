@@ -22,7 +22,7 @@ Edit Trigger
 
 
 <button
-class="btn-success"
+class="btn-success save-button"
 type="submit">
 
 Save
@@ -317,6 +317,20 @@ Keyboard
 
 <div class="target-box">
 
+<div class="audio-sequence-operation" style="display:none">
+    <label>Operation</label>
+    <select name="action_operation" class="btna">
+        <option value="start"
+            {% if action.get("operation", "start") == "start" %}selected{% endif %}>
+            Start
+        </option>
+        <option value="stop"
+            {% if action.get("operation") == "stop" %}selected{% endif %}>
+            Stop
+        </option>
+    </select>
+</div>
+
 <input
 class="text-input btna"
 name="action_target"
@@ -498,7 +512,7 @@ onclick="addAction()">
 
 
 <button
-class="btn-success"
+class="btn-success save-button"
 type="submit">
 
 Save
@@ -708,6 +722,10 @@ placeholder="Target">
 <br>
 </div>
 
+<div class="suggestions audio-sequence-suggestions">
+<br>
+</div>
+
 </div>
 
 
@@ -743,7 +761,7 @@ Record Hotkeys
 <div class="audio-sequence-operation" style="display:none">
     <label>Operation</label>
     <select name="action_operation" class="btna">
-        <option value="start">Start</option>
+        <option value="start" selected>Start</option>
         <option value="stop">Stop</option>
     </select>
 </div>
@@ -908,6 +926,7 @@ function setTarget(button){
 
 
 
+
 function updateAction(select) {
     const card = select.closest(".action-card");
     if (!card) return;
@@ -916,6 +935,7 @@ function updateAction(select) {
 
     const keyboard = card.querySelector(".keyboard-action");
     const target = card.querySelector(".target-box");
+    const operationBox = card.querySelector(".audio-sequence-operation");
 
     const suggestionTypes = [
         "scene",
@@ -925,14 +945,13 @@ function updateAction(select) {
         "audio_sequence"
     ];
 
-    // Alle Bereiche zuerst ausblenden
     if (keyboard) keyboard.style.display = "none";
     if (target) target.style.display = "none";
+    if (operationBox) operationBox.style.display = "none";
 
     suggestionTypes.forEach(actionType => {
-        const box = card.querySelector(
-            `.${actionType.replace("_", "-")}-suggestions`
-        );
+        const className = actionType.replace("_", "-") + "-suggestions";
+        const box = card.querySelector("." + className);
 
         if (box) box.style.display = "none";
     });
@@ -946,31 +965,40 @@ function updateAction(select) {
 
     target.style.display = "block";
 
-    const suggestionBox = card.querySelector(
-        `.${type.replace("_", "-")}-suggestions`
-    );
+    const suggestionClass =
+        type.replace("_", "-") + "-suggestions";
 
-    if (!suggestionBox) return;
+    const suggestionBox = card.querySelector("." + suggestionClass);
 
-    suggestionBox.style.display = "block";
-    suggestionBox.innerHTML = "";
+    if (suggestionBox) {
+        suggestionBox.style.display = "block";
+        suggestionBox.innerHTML = "";
 
-    const suggestions = {
-        scene: scenes,
-        fade: fades,
-        strobe: strobes,
-        sequence: sequences,
-        audio_sequence: audioSequences
-    };
+        const suggestions = {
+            scene: scenes,
+            fade: fades,
+            strobe: strobes,
+            sequence: sequences,
+            audio_sequence: audioSequences
+        };
 
-    (suggestions[type] || []).forEach(name => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "btna";
-        button.textContent = name;
-        button.addEventListener("click", () => setTarget(button));
-        suggestionBox.appendChild(button);
-    });
+        (suggestions[type] || []).forEach(name => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "btna";
+            button.textContent = name;
+
+            button.addEventListener("click", () => {
+                setTarget(button);
+            });
+
+            suggestionBox.appendChild(button);
+        });
+    }
+
+    if (type === "audio_sequence" && operationBox) {
+        operationBox.style.display = "block";
+    }
 }
 
 document

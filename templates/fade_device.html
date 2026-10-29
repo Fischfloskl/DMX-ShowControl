@@ -1,248 +1,244 @@
+
 {% if mode == "edit" %}{% extends "base.html" %}{% else %}{% extends "show_base.html" %}{% endif %}
 
 {% block content %}
 
-
-<h1>
-{{device.name}}
-</h1>
-
+<h1>{{ device.name }}</h1>
 
 <form action="/fades/device/save" method="post">
 
-<button
-type="submit"
-class="btn-success">
-
-Save
-
-</button>
-
-
-
-<button
-class="btna"
-type="button"
-onclick="window.location.href='/fades/edit?id={{fade.id}}'">
-
-Cancel
-
-</button>
-
-<br><br>
-
-<input
-type="hidden"
-name="fade_id"
-value="{{fade.id}}">
-
-
-<input
-type="hidden"
-name="device_id"
-value="{{device.id}}">
-
-
-
-<div class="card">
-
-
-<h2>
-Channels
-</h2>
-
-
-
-<div class="mode-selector">
-
-
-<label class="mode-option">
-
-<input
-type="radio"
-name="mode"
-value="merge"
-{% if fade.get("mode","merge") == "merge" %}
-checked
-{% endif %}
->
-
-<div class="mode-card">
-
-<strong>
-Merge
-</strong>
-
-<span>
-Change only active channels
-</span>
-
-</div>
-
-</label>
-
-
-
-<label class="mode-option">
-
-<input
-type="radio"
-name="mode"
-value="overwrite"
-{% if fade.get("mode") == "overwrite" %}
-checked
-{% endif %}
->
-
-<div class="mode-card">
-
-<strong>
-Overwrite
-</strong>
-
-<span>
-Replace the entire device
-</span>
-
-</div>
-
-</label>
-
-
-
-
-<label class="mode-option">
-
-<input
-type="radio"
-name="mode"
-value="exclusive"
-{% if fade.get("mode") == "exclusive" %}
-checked
-{% endif %}
->
-
-<div class="mode-card">
-
-<strong>
-Exclusive
-</strong>
-
-<span>
-Take control of the device
-</span>
-
-</div>
-
-</label>
-
-
-</div>
-
-<br>
-<br>
-
-
-
-{% for i in range(1,device.channels+1) %}
-
-
-<div class="action-card">
-
-
-<h3>
-Channel {{i}} - {{device.channel_names[i-1]}}
-</h3>
-
-
-
-<label>
-
-<input
-type="checkbox"
-class="checkbox"
-name="enable_{{i}}"
-
-{% if channels.get(i,{}).get("enabled") %}
-checked
-{% endif %}
-
->
-
-Active
-
-</label>
-
-
-<br><br>
-
-
-
-<label>
-Start-value
-</label>
-
-<input
-class="btna"
-type="number"
-name="start_{{i}}"
-value="{{channels.get(i,{}).get('start',0)}}"
-min="0"
-max="255">
-
-
-
-<label>
-End-value
-</label>
-
-<input
-class="btna"
-type="number"
-name="end_{{i}}"
-value="{{channels.get(i,{}).get('end',255)}}"
-min="0"
-max="255">
-
-
-</div>
-
-
-<br>
-<br>
-<br>
-
-
-{% endfor %}
-
-
-
-<button
-type="submit"
-class="btn-success">
-
-Save
-
-</button>
-
-
-
-<button
-class="btna"
-type="button"
-onclick="window.location.href='/fades/edit?id={{fade.id}}'">
-
-Cancel
-
-</button>
-
-
-
-</div>
-
+    <input type="hidden" name="fade_id" value="{{ fade.id }}">
+    <input type="hidden" name="device_id" value="{{ device.id }}">
+
+    <div class="card">
+        <div class="scene-actions">
+            <button type="submit" class="btn-success save-button">Save</button>
+            <button type="button" class="btna"
+                    onclick="window.location.href='/fades/edit?id={{ fade.id }}'">
+                Cancel
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Fade Mode</h2>
+
+        <div class="mode-selector">
+            {% for mode_option, title, description in [
+                ('merge', 'Merge', 'Change only active channels'),
+                ('overwrite', 'Overwrite', 'Replace the entire device'),
+                ('exclusive', 'Exclusive', 'Take control of the device')
+            ] %}
+                <label class="mode-option">
+                    <input type="radio" name="mode" value="{{ mode_option }}"
+                        {% if fade.get('mode', 'merge') == mode_option %}checked{% endif %}>
+                    <div class="mode-card">
+                        <strong>{{ title }}</strong>
+                        <span>{{ description }}</span>
+                    </div>
+                </label>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% set functions = device.channel_functions if device.channel_functions is defined else [] %}
+
+    <div class="card">
+        <h2>Color Zones</h2>
+        <p style="color:#999;">
+            Choose the start and end colors for each RGB zone.
+            RGBW zones also provide independent white-channel control.
+        </p>
+
+        {% for zone in [1, 2, 3] %}
+            {% set z = namespace(r=0, g=0, b=0, w=0) %}
+
+            {% for c in range(device.channels) %}
+                {% set fn = functions[c] if c < functions|length else 'Fader' %}
+                {% if fn == 'R' ~ zone %}
+                    {% set z.r = c + 1 %}
+                {% elif fn == 'G' ~ zone %}
+                    {% set z.g = c + 1 %}
+                {% elif fn == 'B' ~ zone %}
+                    {% set z.b = c + 1 %}
+                {% elif fn == 'W' ~ zone %}
+                    {% set z.w = c + 1 %}
+                {% endif %}
+            {% endfor %}
+
+            {% if z.r and z.g and z.b %}
+                {% set sr = channels.get(z.r, {}).get('start', 0) %}
+                {% set sg = channels.get(z.g, {}).get('start', 0) %}
+                {% set sb = channels.get(z.b, {}).get('start', 0) %}
+                {% set er = channels.get(z.r, {}).get('end', 255) %}
+                {% set eg = channels.get(z.g, {}).get('end', 255) %}
+                {% set eb = channels.get(z.b, {}).get('end', 255) %}
+
+                {% set zone_enabled = (
+                    channels.get(z.r, {}).get('enabled', false)
+                    and channels.get(z.g, {}).get('enabled', false)
+                    and channels.get(z.b, {}).get('enabled', false)
+                ) %}
+
+                <div class="action-card">
+                    <h3>Color Zone {{ zone }}{% if z.w %} (RGBW){% else %} (RGB){% endif %}</h3>
+
+                    <label>
+                        <input type="checkbox"
+                               class="checkbox"
+                               name="zone_enable_{{ zone }}"
+                               {% if zone_enabled %}checked{% endif %}>
+                        Active
+                    </label>
+
+                    <div class="form-grid">
+                        <div>
+                            <h4>Start Color</h4>
+                            <input type="color"
+                                   class="dmx-color-picker"
+                                   data-value-prefix="start"
+                                   data-r-channel="{{ z.r }}"
+                                   data-g-channel="{{ z.g }}"
+                                   data-b-channel="{{ z.b }}"
+                                   value="{{ '#%02x%02x%02x'|format(sr, sg, sb) }}">
+                        </div>
+
+                        <div>
+                            <h4>End Color</h4>
+                            <input type="color"
+                                   class="dmx-color-picker"
+                                   data-value-prefix="end"
+                                   data-r-channel="{{ z.r }}"
+                                   data-g-channel="{{ z.g }}"
+                                   data-b-channel="{{ z.b }}"
+                                   value="{{ '#%02x%02x%02x'|format(er, eg, eb) }}">
+                        </div>
+                    </div>
+
+                    {% for ch in [z.r, z.g, z.b] %}
+                        <input type="hidden"
+                               name="start_{{ ch }}"
+                               value="{{ channels.get(ch, {}).get('start', 0) }}">
+                        <input type="hidden"
+                               name="end_{{ ch }}"
+                               value="{{ channels.get(ch, {}).get('end', 255) }}">
+                    {% endfor %}
+
+                    {% if z.w %}
+                        <div style="margin-top:18px;">
+                            <h4>White Channel</h4>
+
+                            <label>
+                                <input type="checkbox"
+                                       class="checkbox"
+                                       name="enable_{{ z.w }}"
+                                       {% if channels.get(z.w, {}).get('enabled') %}checked{% endif %}>
+                                Active
+                            </label>
+
+                            <div class="form-grid">
+                                <div>
+                                    <label for="start_{{ z.w }}">Start White</label>
+                                    <input class="btna"
+                                           type="number"
+                                           id="start_{{ z.w }}"
+                                           name="start_{{ z.w }}"
+                                           value="{{ channels.get(z.w, {}).get('start', 0) }}"
+                                           min="0" max="255">
+                                </div>
+
+                                <div>
+                                    <label for="end_{{ z.w }}">End White</label>
+                                    <input class="btna"
+                                           type="number"
+                                           id="end_{{ z.w }}"
+                                           name="end_{{ z.w }}"
+                                           value="{{ channels.get(z.w, {}).get('end', 255) }}"
+                                           min="0" max="255">
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                <br>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="card">
+        <h2>Individual Channels</h2>
+
+        {% for i in range(1, device.channels + 1) %}
+            {% set fn = functions[i-1] if i-1 < functions|length else 'Fader' %}
+            {% set skip = namespace(value=(fn == 'Disabled')) %}
+
+            {% for zone in [1, 2, 3] %}
+                {% set z = namespace(r=0, g=0, b=0, w=0) %}
+                {% for c in range(device.channels) %}
+                    {% set f = functions[c] if c < functions|length else 'Fader' %}
+                    {% if f == 'R' ~ zone %}{% set z.r = c + 1 %}
+                    {% elif f == 'G' ~ zone %}{% set z.g = c + 1 %}
+                    {% elif f == 'B' ~ zone %}{% set z.b = c + 1 %}
+                    {% elif f == 'W' ~ zone %}{% set z.w = c + 1 %}
+                    {% endif %}
+                {% endfor %}
+
+                {% if z.r and z.g and z.b and i in [z.r, z.g, z.b, z.w] %}
+                    {% set skip.value = true %}
+                {% endif %}
+            {% endfor %}
+
+            {% if not skip.value %}
+                {% set ch = channels.get(i, {}) %}
+
+                <div class="action-card">
+                    <h3>Channel {{ i }} — {{ device.channel_names[i-1] }}</h3>
+
+                    <label>
+                        <input type="checkbox"
+                               class="checkbox"
+                               name="enable_{{ i }}"
+                               {% if ch.get('enabled') %}checked{% endif %}>
+                        Active
+                    </label>
+
+                    <div class="form-grid">
+                        <div>
+                            <label for="start_{{ i }}">Start Value</label>
+                            <input class="btna"
+                                   type="number"
+                                   id="start_{{ i }}"
+                                   name="start_{{ i }}"
+                                   value="{{ ch.get('start', 0) }}"
+                                   min="0" max="255">
+                        </div>
+
+                        <div>
+                            <label for="end_{{ i }}">End Value</label>
+                            <input class="btna"
+                                   type="number"
+                                   id="end_{{ i }}"
+                                   name="end_{{ i }}"
+                                   value="{{ ch.get('end', 255) }}"
+                                   min="0" max="255">
+                        </div>
+                    </div>
+                </div>
+                <br>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <div class="card">
+        <div class="scene-actions">
+            <button type="submit" class="btn-success save-button">Save</button>
+            <button type="button" class="btna"
+                    onclick="window.location.href='/fades/edit?id={{ fade.id }}'">
+                Cancel
+            </button>
+        </div>
+    </div>
 
 </form>
-
-
 
 {% endblock %}

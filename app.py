@@ -81,6 +81,8 @@ fade_engine = FadeEngine(
     devices,
     settings
 )
+# Allow the fade engine to resolve scene references.
+fade_engine.scene_manager = scene_manager
 
 strobe_manager = StrobeManager(
     scene_manager,
@@ -109,6 +111,7 @@ music_show_engine = MusicShowEngine(
     fade_engine=fade_engine,
     sequence_manager=sequence_manager,
     dmx_manager=dmx_manager,
+    strobe_manager=strobe_manager,
 )
 
 
@@ -645,28 +648,20 @@ def add_fade():
 
 @app.route("/fades/edit")
 def edit_fade():
-
     fade = fade_manager.get_id(
         int(request.args["id"])
     )
 
-
     if not fade:
-        return "Fade not found",404
-
-
-    print("FADE:")
-    print(fade)
-
-    print("DEVICES:")
-    print(devices.devices)
-
+        return "Fade not found", 404
 
     return render_template(
         "fade_edit.html",
         fade=fade,
-        devices=devices.devices
+        devices=devices.devices,
+        scenes=scene_manager.scenes
     )
+
 
 @app.route("/fades/device/add", methods=["POST"])
 def add_device_to_fade():
@@ -792,107 +787,105 @@ def edit_fade_device():
 
 @app.route("/fades/device/save", methods=["POST"])
 def save_fade_device():
+    fade_id = int(request.form["fade_id"])
+    device_id = int(request.form["device_id"])
 
-
-    fade_id=int(
-        request.form["fade_id"]
-    )
-
-
-    device_id=int(
-        request.form["device_id"]
-    )
-
-    fade=fade_manager.get_id(
-        fade_id
-    )
-
+    fade = fade_manager.get_id(fade_id)
+    device = devices.get_id(device_id)
 
     if not fade:
-        return "Fade not found",404
+        return "Fade not found", 404
 
-    fade["mode"] = request.form.get(
-        "mode",
-        "merge"
-    )
-    
-    print(fade["mode"])
+    if not device:
+        return "Device not found", 404
 
+    mode = request.form.get("mode", "merge")
+    if mode not in {"merge", "overwrite", "exclusive"}:
+        return "Invalid fade mode", 400
 
+    fade["mode"] = mode
 
-    result=[]
+    channel_count = int(device["channels"])
+    functions = device.get("channel_functions", [])
 
+    # Map channels belonging to complete RGB zones.
+    rgb_zone_by_channel = {}
 
-    device=devices.get_id(
-        device_id
-    )
+    for zone in (1, 2, 3):
+        zone_channels = {}
 
-
-    for i in range(
-        1,
-        device["channels"]+1
-    ):
-
-
-        enabled = (
-            f"enable_{i}"
-            in request.form
-        )
-
-
-        result.append({
-
-            "channel":i,
-
-            "enabled":enabled,
-
-            "start":int(
-                request.form.get(
-                    f"start_{i}",
-                    0
-                )
-            ),
-
-            "end":int(
-                request.form.get(
-                    f"end_{i}",
-                    255
-                )
+        for index in range(channel_count):
+            function = (
+                functions[index]
+                if index < len(functions)
+                else "Fader"
             )
 
+            if function in {"Disabled", "Fader"}:
+                continue
+
+            if function in {
+                f"R{zone}", f"G{zone}", f"B{zone}"
+            }:
+                zone_channels[function[0]] = index + 1
+
+        if all(color in zone_channels for color in ("R", "G", "B")):
+            for channel in zone_channels.values():
+                rgb_zone_by_channel[channel] = zone
+
+    result = []
+
+    for channel in range(1, channel_count + 1):
+        function = (
+            functions[channel - 1]
+            if channel - 1 < len(functions)
+            else "Fader"
+        )
+
+        # Disabled device channels must never be active in a fade.
+        if function == "Disabled":
+            enabled = False
+
+        elif channel in rgb_zone_by_channel:
+            zone = rgb_zone_by_channel[channel]
+            enabled = f"zone_enable_{zone}" in request.form
+
+        else:
+            enabled = f"enable_{channel}" in request.form
+
+        try:
+            start = int(request.form.get(f"start_{channel}", 0))
+            end = int(request.form.get(f"end_{channel}", 255))
+        except (TypeError, ValueError):
+            return f"Invalid value for channel {channel}", 400
+
+        if not (0 <= start <= 255 and 0 <= end <= 255):
+            return f"Channel {channel} values must be between 0 and 255.", 400
+
+        result.append({
+            "channel": channel,
+            "enabled": enabled,
+            "start": start,
+            "end": end
         })
 
+    if "devices" not in fade:
+        fade["devices"] = []
 
-
-    found=False
-
-
-    for d in fade["devices"]:
-
-        if d["device"] == device_id:
-
-            d["channels"]=result
-            found=True
-
-
-
-    if not found:
-
+    for fade_device in fade["devices"]:
+        if fade_device["device"] == device_id:
+            fade_device["channels"] = result
+            break
+    else:
         fade["devices"].append({
-
-            "device":device_id,
-
-            "channels":result
-
+            "device": device_id,
+            "channels": result
         })
-
 
     fade_manager.save()
 
+    return redirect(f"/fades/edit?id={fade_id}")
 
-    return redirect(
-        f"/fades/edit?id={fade_id}"
-    )
 
 @app.route("/fades/start")
 def start_fade():
@@ -908,50 +901,71 @@ def start_fade():
 
     return "OK"
 
+
 @app.route("/fades/save", methods=["POST"])
 def save_fade():
+    fade_id = int(request.form["id"])
+    fade = fade_manager.get_id(fade_id)
 
+    if not fade:
+        return "Fade not found", 404
 
-    fade_id=int(
-        request.form["id"]
-    )
+    fade_type = request.form.get("fade_type", "custom")
 
+    if fade_type not in {"custom", "scenes"}:
+        return "Invalid fade type", 400
 
-    fade=fade_manager.get_id(
-        fade_id
-    )
+    name = request.form.get("name", "").strip()
 
+    if not name:
+        return "Fade name is required", 400
 
-    fade["name"]=request.form["name"]
+    try:
+        duration = int(request.form["duration"])
+    except (TypeError, ValueError):
+        return "Invalid duration", 400
 
-    duration=int(
-        request.form["duration"]
-    )
+    if duration < 1:
+        return "Duration must be greater than zero", 400
 
+    unit = request.form.get("duration_unit", "ms")
 
-    unit=request.form.get(
-        "duration_unit"
-    )
+    if unit == "sec":
+        duration *= 1000
+    elif unit == "min":
+        duration *= 60000
+    elif unit != "ms":
+        return "Invalid duration unit", 400
 
+    fade["name"] = name
+    fade["duration"] = duration
+    fade["type"] = fade_type
 
-    if unit=="sec":
-        duration*=1000
+    if fade_type == "scenes":
+        try:
+            start_scene_id = int(request.form["start_scene"])
+            end_scene_id = int(request.form["end_scene"])
+        except (KeyError, TypeError, ValueError):
+            return "Please select both scenes", 400
 
-    elif unit=="min":
-        duration*=60000
+        start_scene = scene_manager.get_id(start_scene_id)
+        end_scene = scene_manager.get_id(end_scene_id)
 
+        if not start_scene or not end_scene:
+            return "Selected scene not found", 400
 
+        fade["start_scene"] = start_scene_id
+        fade["end_scene"] = end_scene_id
 
-    fade["duration"]=duration
-
+    else:
+        # Keep existing custom-channel configuration.
+        fade.pop("start_scene", None)
+        fade.pop("end_scene", None)
 
     fade_manager.save()
 
-
-    return redirect(
-        "/fades"
-    )
-
+    #return redirect(f"/fades/edit?id={fade_id}")
+    return redirect(f"/fades")
 
 @app.route("/dmx/clear")
 def dmx_clear():
@@ -1532,66 +1546,45 @@ def save_trigger():
 
     # Aktionen neu aufbauen
 
-    types = request.form.getlist(
-        "action_type"
-    )
-
-    targets = request.form.getlist(
-        "action_target"
-    )
-
-    keys = request.form.getlist(
-        "action_keys"
-    )
-
-    operations = request.form.getlist(
-        "action_operation"
-    )
-
+   
+    types = request.form.getlist("action_type")
+    targets = request.form.getlist("action_target")
+    keys = request.form.getlist("action_keys")
+    operations = request.form.getlist("action_operation")
 
     actions = []
 
-
     for i, action_type in enumerate(types):
-
-
         action = {
             "type": action_type
         }
 
-
         if action_type == "keyboard":
-
             if i < len(keys):
-
                 action["keys"] = [
-                    k for k in keys[i].split(",")
-                    if k
+                    key for key in keys[i].split(",") if key
                 ]
 
-        elif action_type == "audio_sequence":
+        else:
             if i < len(targets):
                 action["target"] = targets[i].strip()
 
-            action["operation"] = (
+        if action_type == "audio_sequence":
+            operation = (
                 operations[i]
-                if i < len(operations) and operations[i] in ("start", "stop")
+                if i < len(operations)
                 else "start"
             )
 
-        else:
+            if operation not in ("start", "stop"):
+                operation = "start"
 
-            if i < len(targets):
-
-                action["target"] = targets[i]
-
-
+            action["operation"] = operation
 
         actions.append(action)
 
-
-
     trigger["actions"] = actions
+
 
 
     trigger_manager.save()
@@ -1687,18 +1680,24 @@ def duplicate_device():
         request.referrer or "/devices"
     )
 
+
 @app.route("/devices/add", methods=["POST"])
 def add_device():
+    channel_count = int(request.form["channels"])
 
     device = {
         "id": len(devices.devices) + 1,
         "name": request.form["name"],
         "start_channel": int(request.form["address"]),
-        "channels": int(request.form["channels"]),
+        "channels": channel_count,
         "color": request.form["color"],
         "channel_names": [
             f"CH{i+1}"
-            for i in range(int(request.form["channels"]))
+            for i in range(channel_count)
+        ],
+        "channel_functions": [
+            "Fader"
+            for _ in range(channel_count)
         ]
     }
 
@@ -1748,71 +1747,81 @@ def edit_device():
         device=device
     )
 
+
 @app.route("/devices/edit/save", methods=["POST"])
 def save_device():
-
     device_id = int(request.form["id"])
 
+    valid_functions = {
+        "Fader",
+        "Disabled",
+        "R1", "G1", "B1", "W1",
+        "R2", "G2", "B2", "W2",
+        "R3", "G3", "B3", "W3"
+    }
 
     for d in devices.devices:
+        if d["id"] != device_id:
+            continue
 
-        if d["id"] == device_id:
+        new_channels = int(request.form["channels"])
 
-            old_channels = d["channels"]
+        if new_channels < 1:
+            return "Channel count must be at least 1.", 400
 
-            new_channels = int(
-                request.form["channels"]
+        d["name"] = request.form["name"]
+        d["start_channel"] = int(request.form["start_channel"])
+        d["channels"] = new_channels
+        d["color"] = request.form["color"]
+
+        old_names = d.get("channel_names", [])
+        old_functions = d.get("channel_functions", [])
+
+        new_names = []
+        new_functions = []
+
+        for i in range(new_channels):
+            channel_number = i + 1
+
+            # Preserve channel names where possible.
+            name_key = f"channel_{channel_number}"
+            channel_name = request.form.get(
+                name_key,
+                old_names[i] if i < len(old_names) else f"CH{channel_number}"
+            )
+            new_names.append(channel_name)
+
+            # Read the selected function and validate it.
+            function_key = f"function_{channel_number}"
+            default_function = (
+                old_functions[i]
+                if i < len(old_functions)
+                else "Fader"
             )
 
-
-            d["name"] = request.form["name"]
-
-            d["start_channel"] = int(
-                request.form["start_channel"]
+            function = request.form.get(
+                function_key,
+                default_function
             )
 
-            d["channels"] = new_channels
+            if function not in valid_functions:
+                return (
+                    f"Invalid channel function for channel {channel_number}.",
+                    400
+                )
 
-            d["color"] = request.form["color"]
+            new_functions.append(function)
 
-
-
-            # Kanalnamen neu erzeugen
-            new_names = []
-
-            for i in range(new_channels):
-
-                key = f"channel_{i+1}"
-
-                if key in request.form:
-
-                    new_names.append(
-                        request.form[key]
-                    )
-
-                elif i < len(d["channel_names"]):
-
-                    new_names.append(
-                        d["channel_names"][i]
-                    )
-
-                else:
-
-                    new_names.append(
-                        f"CH{i+1}"
-                    )
-
-
-            d["channel_names"] = new_names
-
-
-            break
-
+        d["channel_names"] = new_names
+        d["channel_functions"] = new_functions
+        break
+    else:
+        return "Device not found.", 404
 
     devices.save()
 
-
     return redirect("/devices")
+
 
 
 @app.route("/settings")
@@ -3071,15 +3080,6 @@ def stop_strobe():
 
 
 
-# ============================================================
-# MUSIC SYNC – AUDIO CAPTURE API
-# ============================================================
-
-@app.get("/audio")
-def audio_page():
-    return render_template("audio.html")
-
-
 @app.get("/api/audio/devices")
 def audio_devices():
     try:
@@ -3243,159 +3243,320 @@ def music_stop():
 # AUDIO SEQUENCES API
 # ============================================================
 
+# ----------------------------
+# Audio Sequence Pages
+# ----------------------------
+
+@app.get("/audio")
+def audio_page():
+    return render_template("audio.html")
+
+
+
+
+@app.get("/audio-sequences/edit")
+def audio_sequence_edit_page():
+    mode = request.args.get("mode", "").strip().lower()
+    sequence_id = request.args.get("id", "").strip()
+
+    if mode == "new":
+        sequence = {
+            "version": 1,
+            "name": "",
+            "description": "",
+            "use_global_settings": False,
+            "overrides": {
+                "source": "bass",
+                "sensitivity": 150,
+                "min_interval_ms": 120,
+                "device_index": None,
+                "eq_weights": [180, 300, 200, 80, 50, 40, 25, 15],
+            },
+            "reaction": {
+                "enabled": True,
+                "movement_speed": 0.85,
+                "color_change": 0.75,
+                "intensity": 0.9,
+                "strobe_enabled": False,
+            },
+            "every_beats": 1,
+            "actions": [],
+        }
+
+        return render_template(
+            "audio_sequence_edit.html",
+            sequence=sequence,
+            settings=dict(sequence["overrides"]),
+            scenes=scene_manager.scenes,
+            fades=fade_manager.fades,
+            is_new=True,
+            strobes=strobe_manager.strobes
+        )
+
+    if not sequence_id:
+        return "Audio sequence ID is required", 400
+
+    try:
+        sequence = audio_sequence_manager.load_sequence(sequence_id)
+        settings = audio_sequence_manager.get_effective_settings(sequence)
+
+        return render_template(
+            "audio_sequence_edit.html",
+            sequence=sequence,
+            settings=settings,
+            scenes=scene_manager.scenes,
+            fades=fade_manager.fades,
+            is_new=False,
+            strobes=strobe_manager.strobes
+        )
+
+    except FileNotFoundError:
+        return "Audio sequence not found", 404
+    except ValueError as error:
+        return str(error), 400
+
+
+
+# ============================================================
+# AUDIO SEQUENCE API
+# All sequence operations use stable sequence IDs.
+# ============================================================
+
 @app.get("/api/audio-sequences")
 def audio_sequences_list():
-    return jsonify({
-        "success": True,
-        "sequences": audio_sequence_manager.list_sequences(),
-        "state": audio_sequence_manager.get_state(),
-    })
+    try:
+        return jsonify({
+            "success": True,
+            "sequences": audio_sequence_manager.list_sequences(),
+            "state": audio_sequence_manager.get_state(),
+        })
+    except Exception:
+        app.logger.exception("Failed to list audio sequences")
+        return jsonify({
+            "success": False,
+            "error": "Failed to load audio sequences.",
+        }), 500
+
 
 
 @app.post("/api/audio-sequences")
 def audio_sequences_create():
-    data = request.get_json(silent=True) or {}
-
-    name = data.get("name", "")
-    description = data.get("description", "")
-
     try:
-        sequence = audio_sequence_manager.create_sequence(
-            name=name,
-            description=description,
-        )
+        data = request.get_json(silent=True) or {}
+        name = str(data.get("name", "")).strip()
+
+        if not name:
+            return jsonify({
+                "success": False,
+                "error": "Sequence name is required."
+            }), 400
+
+        # create_sequence() returns the complete sequence dictionary.
+        sequence = audio_sequence_manager.create_sequence(name, data)
+        sequence_id = sequence["id"]
 
         return jsonify({
             "success": True,
-            "sequence": sequence,
+            "sequence_id": sequence_id,
+            "sequence": sequence
         }), 201
 
-    except (ValueError, OSError) as error:
+    except Exception as exc:
+        app.logger.exception("Failed to create audio sequence")
         return jsonify({
             "success": False,
-            "error": str(error),
-        }), 400
+            "error": str(exc)
+        }), 500
 
 
-@app.get("/api/audio-sequences/<name>")
-def audio_sequence_get(name):
+
+@app.get("/api/audio-sequences/<sequence_id>")
+def audio_sequences_get(sequence_id):
     try:
-        sequence = audio_sequence_manager.load_sequence(name)
+        sequence = audio_sequence_manager.load_sequence(sequence_id)
 
         return jsonify({
             "success": True,
             "sequence": sequence,
         })
 
-    except FileNotFoundError as error:
+    except (ValueError, FileNotFoundError) as exc:
         return jsonify({
             "success": False,
-            "error": str(error),
+            "error": str(exc),
         }), 404
-
-    except (ValueError, OSError) as error:
+    except Exception:
+        app.logger.exception("Failed to load audio sequence")
         return jsonify({
             "success": False,
-            "error": str(error),
-        }), 400
+            "error": "Failed to load audio sequence.",
+        }), 500
 
 
-@app.put("/api/audio-sequences/<name>")
-def audio_sequence_save(name):
-    data = request.get_json(silent=True) or {}
-
+@app.put("/api/audio-sequences/<sequence_id>")
+def audio_sequences_update(sequence_id):
     try:
-        sequence = audio_sequence_manager.save_sequence(
-            name=name,
-            data=data,
+        data = request.get_json(silent=True) or {}
+
+        # The ID is fixed; only the sequence data/name can change.
+        data.pop("id", None)
+        data.pop("sequence_id", None)
+
+        audio_sequence_manager.save_sequence(sequence_id, data)
+
+        return jsonify({
+            "success": True,
+            "sequence": audio_sequence_manager.load_sequence(sequence_id),
+        })
+
+    except ValueError as exc:
+        return jsonify({
+            "success": False,
+            "error": str(exc),
+        }), 400
+    except (FileNotFoundError, KeyError) as exc:
+        return jsonify({
+            "success": False,
+            "error": str(exc),
+        }), 404
+    except Exception:
+        app.logger.exception("Failed to save audio sequence")
+        return jsonify({
+            "success": False,
+            "error": "Failed to save audio sequence.",
+        }), 500
+
+
+@app.delete("/api/audio-sequences/<sequence_id>")
+def audio_sequences_delete(sequence_id):
+    try:
+        audio_sequence_manager.delete_sequence(sequence_id)
+
+        return jsonify({
+            "success": True,
+            "sequence_id": sequence_id,
+        })
+
+    except ValueError as exc:
+        return jsonify({
+            "success": False,
+            "error": str(exc),
+        }), 400
+    except (FileNotFoundError, KeyError) as exc:
+        return jsonify({
+            "success": False,
+            "error": str(exc),
+        }), 404
+    except Exception:
+        app.logger.exception("Failed to delete audio sequence")
+        return jsonify({
+            "success": False,
+            "error": "Failed to delete audio sequence.",
+        }), 500
+
+
+@app.post("/api/audio-sequences/<sequence_id>/duplicate")
+def audio_sequences_duplicate(sequence_id):
+    try:
+        data = request.get_json(silent=True) or {}
+        new_name = data.get("name")
+
+        new_id = audio_sequence_manager.duplicate_sequence(
+            sequence_id,
+            new_name=new_name,
         )
 
         return jsonify({
             "success": True,
-            "sequence": sequence,
-        })
+            "sequence_id": new_id,
+            "sequence": audio_sequence_manager.load_sequence(new_id),
+        }), 201
 
-    except (ValueError, OSError) as error:
+    except ValueError as exc:
         return jsonify({
             "success": False,
-            "error": str(error),
+            "error": str(exc),
         }), 400
+    except (FileNotFoundError, KeyError) as exc:
+        return jsonify({
+            "success": False,
+            "error": str(exc),
+        }), 404
+    except Exception:
+        app.logger.exception("Failed to duplicate audio sequence")
+        return jsonify({
+            "success": False,
+            "error": "Failed to duplicate audio sequence.",
+        }), 500
 
 
-@app.delete("/api/audio-sequences/<name>")
-def audio_sequence_delete(name):
+@app.get("/api/audio-sequences/<sequence_id>/settings")
+def audio_sequences_effective_settings(sequence_id):
     try:
-        audio_sequence_manager.delete_sequence(name)
+        sequence = audio_sequence_manager.load_sequence(sequence_id)
+        settings = audio_sequence_manager.get_effective_settings(sequence)
 
         return jsonify({
             "success": True,
+            "settings": settings,
         })
 
-    except FileNotFoundError as error:
+    except (ValueError, FileNotFoundError) as exc:
         return jsonify({
             "success": False,
-            "error": str(error),
+            "error": str(exc),
         }), 404
-
-    except (ValueError, OSError) as error:
+    except Exception:
+        app.logger.exception("Failed to load effective audio settings")
         return jsonify({
             "success": False,
-            "error": str(error),
+            "error": "Failed to load effective audio settings.",
+        }), 500
+
+
+@app.post("/api/audio-sequences/<sequence_id>/start")
+def audio_sequences_start(sequence_id):
+    try:
+        result = start_audio_sequence(sequence_id)
+        return jsonify(result)
+
+    except (ValueError, FileNotFoundError) as exc:
+        return jsonify({
+            "success": False,
+            "error": str(exc),
         }), 400
+    except Exception:
+        app.logger.exception("Failed to start audio sequence")
+        return jsonify({
+            "success": False,
+            "error": "Failed to start audio sequence.",
+        }), 500
 
 
-@app.get("/api/audio-sequences/settings")
-def audio_sequence_settings_get():
+@app.get("/api/audio-sequences/active")
+def audio_sequences_active():
+    state = audio_sequence_manager.get_state()
+    active_id = state.get("active_sequence")
+
+    active_name = None
+
+    if active_id:
+        try:
+            active_name = audio_sequence_manager.load_sequence(
+                active_id
+            ).get("name")
+        except (ValueError, FileNotFoundError):
+            active_name = None
+
     return jsonify({
         "success": True,
-        "settings": audio_sequence_manager.get_global_settings(),
+        "state": {
+            "running": state.get("running", False),
+            "active_sequence_id": active_id,
+            "active_sequence_name": active_name,
+            "error": state.get("error"),
+        },
     })
-
-
-@app.put("/api/audio-sequences/settings")
-def audio_sequence_settings_save():
-    data = request.get_json(silent=True) or {}
-
-    try:
-        settings_data = audio_sequence_manager.save_global_settings(data)
-
-        return jsonify({
-            "success": True,
-            "settings": settings_data,
-        })
-
-    except (ValueError, OSError) as error:
-        return jsonify({
-            "success": False,
-            "error": str(error),
-        }), 400
-
-
-@app.get("/api/audio-sequences/<name>/settings")
-def audio_sequence_effective_settings(name):
-    try:
-        sequence = audio_sequence_manager.load_sequence(name)
-        effective = audio_sequence_manager.get_effective_settings(sequence)
-
-        return jsonify({
-            "success": True,
-            "settings": effective,
-            "reaction": sequence.get("reaction", {}),
-        })
-
-    except FileNotFoundError as error:
-        return jsonify({
-            "success": False,
-            "error": str(error),
-        }), 404
-
-    except (ValueError, OSError) as error:
-        return jsonify({
-            "success": False,
-            "error": str(error),
-        }), 400
-
-
 
 
 
@@ -3408,20 +3569,22 @@ active_audio_sequence = None
 
 
 
-def start_audio_sequence(name):
+
+def start_audio_sequence(sequence_id):
     global active_audio_sequence
 
     with audio_sequence_lock:
-        # Sequenz laden und effektive Einstellungen bestimmen.
-        sequence = audio_sequence_manager.load_sequence(name)
+        # Load the sequence by its stable ID.
+        sequence = audio_sequence_manager.load_sequence(sequence_id)
+        sequence_id = sequence["id"]
+
         audio_settings = audio_sequence_manager.get_effective_settings(
             sequence
         )
 
         device_index = audio_settings.get("device_index")
 
-        # Wenn bereits ein Capture läuft, dessen Gerät weiterverwenden,
-        # sofern kein Gerät explizit konfiguriert wurde.
+        # Reuse the current capture device if no device is configured.
         current_audio = audio_analyzer.get_state()
 
         if device_index is None and current_audio.get("running"):
@@ -3429,15 +3592,14 @@ def start_audio_sequence(name):
 
         if device_index is None:
             raise ValueError(
-                "Kein Audiogerät konfiguriert. "
-                "Bitte wähle ein Gerät in den globalen Audio-Einstellungen."
+                "No audio device configured. "
+                "Please select a device in the global audio settings."
             )
 
-        # Vorherige Audio-Sequenz und Musiksteuerung beenden.
+        # Stop the previous sequence and music control.
         music_show_engine.stop()
         music_beat_engine.stop()
 
-        # Audioquelle wechseln oder neu starten, falls erforderlich.
         current_audio = audio_analyzer.get_state()
 
         if (
@@ -3446,7 +3608,7 @@ def start_audio_sequence(name):
         ):
             audio_analyzer.start(int(device_index))
 
-        # Beat-Einstellungen dieser Sequenz anwenden.
+        # Apply this sequence's beat detection settings.
         music_beat_engine.configure({
             "source": audio_settings["source"],
             "sensitivity": audio_settings["sensitivity"],
@@ -3454,31 +3616,27 @@ def start_audio_sequence(name):
             "eq_weights": audio_settings["eq_weights"],
         })
 
-        # Sequenz als aktiv markieren.
-        audio_sequence_manager.start(name)
-        active_audio_sequence = name
+        # Store the stable ID, not the editable display name.
+        audio_sequence_manager.start(sequence_id)
+        active_audio_sequence = sequence_id
 
-        # Beat-Erkennung starten.
         music_beat_engine.start()
 
-        show_config = music_show_engine.get_config()
-
-        if show_config.get("enabled") and show_config.get("actions"):
-            music_show_engine.start()
-
-        # Vorhandene beatbasierte Musiksteuerung starten.
-        # Sie führt nur Aktionen aus, wenn diese in der
-        # bestehenden MusicShowEngine konfiguriert sind.
+        if sequence.get("actions"):
+            music_show_engine.start_sequence(sequence)
 
         return {
             "success": True,
             "active_sequence": active_audio_sequence,
+            "sequence_id": sequence_id,
+            "sequence_name": sequence["name"],
             "audio": audio_analyzer.get_state(),
             "beat": music_beat_engine.get_state(),
             "show": music_show_engine.get_state(),
             "settings": audio_settings,
             "reaction": sequence.get("reaction", {}),
         }
+
 
 
 def stop_audio_sequence():
@@ -3535,26 +3693,3 @@ def audio_sequence_start(name):
             "success": False,
             "error": str(error),
         }), 500
-
-
-@app.post("/api/audio-sequences/stop")
-def audio_sequence_stop():
-    try:
-        return jsonify(stop_audio_sequence())
-
-    except Exception as error:
-        app.logger.exception(
-            "Audio-Sequenz konnte nicht gestoppt werden"
-        )
-        return jsonify({
-            "success": False,
-            "error": str(error),
-        }), 500
-
-
-@app.get("/api/audio-sequences/active")
-def audio_sequence_active():
-    return jsonify({
-        "success": True,
-        "active_sequence": active_audio_sequence,
-    })

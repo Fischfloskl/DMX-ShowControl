@@ -1,138 +1,207 @@
+
 import threading
 import time
 
 
 class FadeEngine:
-
-
     def __init__(self, dmx_manager, devices, settings):
-
         self.dmx_manager = dmx_manager
         self.devices = devices
         self.settings = settings
         self.show_controller = None
-
+        self.scene_manager = None
         self.running = False
-
+        self._lock = threading.Lock()
 
     def play(self, fade):
+        with self._lock:
+            if self.running:
+                return False
 
-        if self.running:
-            return
-
+            self.running = True
 
         thread = threading.Thread(
             target=self._run,
-            args=(fade,)
+            args=(fade,),
+            daemon=True
         )
-
         thread.start()
-
-
+        return True
 
     def _run(self, fade):
+        try:
+            duration = max(1, int(fade.get("duration", 1000)))
+            refresh = max(1, int(self.settings.refresh_rate))
+            delay = refresh / 1000
+            steps = max(1, int(duration / refresh))
 
-        self.running = True
+            if fade.get("type", "custom") == "scenes":
+                start_values, end_values = self._scene_values(fade)
+            else:
+                start_values, end_values = self._custom_values(fade)
 
-        duration = fade.get(
-            "duration",
-            1000
-        )
+            if not end_values:
+                return
 
-        refresh = max(
-            1,
-            self.settings.refresh_rate
-        )
+            mode = fade.get("mode", "merge")
 
-        delay = refresh / 1000
+            # Merge starts from the current DMX output.
+            # Other modes use the configured start values.
+            if mode == "merge":
+                for channel in end_values:
+                    start_values[channel] = self.dmx_manager.current.get(
+                        channel,
+                        start_values.get(channel, 0)
+                    )
 
-        steps = max(
-            1,
-            int(duration / refresh)
-        )
+            for step in range(steps + 1):
+                if not self.running:
+                    return
 
+                if self.show_controller and self.show_controller.stopped():
+                    return
+
+                progress = step / steps
+                values = {}
+
+                for channel, end in end_values.items():
+                    start = start_values.get(channel, 0)
+                    values[channel] = max(
+                        0,
+                        min(255, int(start + (end - start) * progress))
+                    )
+
+                self.dmx_manager.apply_values(values)
+                time.sleep(delay)
+
+            if self.running:
+                self.dmx_manager.apply_values(end_values)
+
+        except Exception as exc:
+            print(f"Fade error: {exc}")
+
+        finally:
+            with self._lock:
+                self.running = False
+
+    def _custom_values(self, fade):
         start_values = {}
         end_values = {}
 
-        mode = fade.get(
-            "mode",
-            "overwrite"
-        )
-
-        # Werte vorbereiten
-        for fade_device in fade["devices"]:
-
-            device = self.devices.get_id(
-                fade_device["device"]
-            )
+        for fade_device in fade.get("devices", []):
+            device = self.devices.get_id(fade_device["device"])
 
             if not device:
                 continue
 
-            for ch in fade_device["channels"]:
+            functions = device.get("channel_functions", [])
+            channel_count = int(device["channels"])
 
-                if not ch["enabled"]:
+            for ch in fade_device.get("channels", []):
+                if not ch.get("enabled", False):
                     continue
 
-                dmx_channel = (
-                    device["start_channel"]
-                    + ch["channel"]
-                    - 1
+                relative_channel = int(ch["channel"])
+
+                if not 1 <= relative_channel <= channel_count:
+                    continue
+
+                function = (
+                    functions[relative_channel - 1]
+                    if relative_channel - 1 < len(functions)
+                    else "Fader"
                 )
 
-                if mode == "merge":
+                if function == "Disabled":
+                    continue
 
-                    # Aktuellen DMX-Wert übernehmen
-                    start = self.dmx_manager.current.get(
-                        dmx_channel,
-                        0
-                    )
-
-                else:
-
-                    # Im Fade gespeicherten Startwert benutzen
-                    start = ch["start"]
-
-                start_values[dmx_channel] = start
-                end_values[dmx_channel] = ch["end"]
-
-        # Fade ausführen
-        for step in range(steps + 1):
-
-            if not self.running:
-                return
-
-            if self.show_controller:
-                if self.show_controller.stopped():
-                    self.running = False
-                    return
-
-            progress = step / steps
-
-            values = {}
-
-            for channel in start_values:
-
-                start = start_values[channel]
-                end = end_values[channel]
-
-                values[channel] = int(
-                    start +
-                    (end - start) * progress
+                absolute_channel = (
+                    int(device["start_channel"]) + relative_channel - 1
                 )
 
-            self.dmx_manager.apply_values(
-                values
+                start_values[absolute_channel] = int(ch.get("start", 0))
+                end_values[absolute_channel] = int(ch.get("end", 255))
+
+        return start_values, end_values
+
+    def _scene_values(self, fade):
+        if not self.scene_manager:
+            raise RuntimeError("Scene manager is not configured")
+
+        start_scene = self.scene_manager.get_id(int(fade["start_scene"]))
+        end_scene = self.scene_manager.get_id(int(fade["end_scene"]))
+
+        if not start_scene or not end_scene:
+            raise RuntimeError("Fade references a missing scene")
+
+        start_devices = start_scene.get("devices", {})
+        end_devices = end_scene.get("devices", {})
+
+        start_values = {}
+        end_values = {}
+
+        # Include devices referenced by either scene.
+        device_ids = set(start_devices) | set(end_devices)
+
+        for device_id in device_ids:
+            device = self.devices.get_id(int(device_id))
+
+            if not device:
+                continue
+
+            channel_count = int(device["channels"])
+            start_channel = int(device["start_channel"])
+            functions = device.get("channel_functions", [])
+
+            scene_start = start_devices.get(
+                str(device_id),
+                start_devices.get(device_id, {})
+            )
+            scene_end = end_devices.get(
+                str(device_id),
+                end_devices.get(device_id, {})
             )
 
-            time.sleep(delay)
+            channel_keys = set(scene_start) | set(scene_end)
 
-        # Endwerte sicher setzen
-        self.dmx_manager.apply_values(
-            end_values
-        )
+            for channel_key in channel_keys:
+                try:
+                    relative_channel = int(channel_key)
+                except (TypeError, ValueError):
+                    continue
 
-        self.running = False
+                if not 1 <= relative_channel <= channel_count:
+                    continue
+
+                function = (
+                    functions[relative_channel - 1]
+                    if relative_channel - 1 < len(functions)
+                    else "Fader"
+                )
+
+                if function == "Disabled":
+                    continue
+
+                absolute_channel = start_channel + relative_channel - 1
+
+                try:
+                    start_value = int(
+                        scene_start.get(channel_key, 0)
+                    )
+                    end_value = int(
+                        scene_end.get(channel_key, 0)
+                    )
+                except (TypeError, ValueError):
+                    continue
+
+                start_values[absolute_channel] = max(
+                    0, min(255, start_value)
+                )
+                end_values[absolute_channel] = max(
+                    0, min(255, end_value)
+                )
+
+        return start_values, end_values
 
     def stop(self):
         self.running = False

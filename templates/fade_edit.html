@@ -1,338 +1,227 @@
-{% if mode == "edit" %}{% extends "base.html" %}{% else %}{% extends "show_base.html" %}{% endif %}
+
+{% if mode == "edit" %}
+{% extends "base.html" %}
+{% else %}
+{% extends "show_base.html" %}
+{% endif %}
 
 {% block content %}
 
-
-<h1>
-Edit Fade
-</h1>
-
+<h1>Edit Fade</h1>
 
 <form action="/fades/save" method="post">
+    <div class="card">
+        <input type="hidden" name="id" value="{{ fade.id }}">
 
+        <label>Name</label>
+        <input
+            class="text-input btna"
+            type="text"
+            name="name"
+            value="{{ fade.name }}"
+            required
+        >
 
-<div class="card">
+        <br><br>
 
+        <label>Duration</label>
+        <div class="form-grid">
+            <input
+                class="btna"
+                type="number"
+                name="duration"
+                value="{{ (fade.get('duration', 1000) / 60000)|int if fade.get('duration_unit') == 'min' else fade.get('duration', 1000) }}"
+                min="1"
+                id="duration"
+                required
+            >
 
-<input
-type="hidden"
-name="id"
-value="{{fade.id}}">
+            <select class="btna" name="duration_unit" id="duration_unit">
+                <option value="ms">Milliseconds</option>
+                <option value="sec">Seconds</option>
+                <option value="min">Minutes</option>
+            </select>
+        </div>
 
+        <br>
 
-<label>
-Name
-</label>
+        <label>Fade Type</label>
+        <select class="btna" name="fade_type" id="fade_type">
+            <option
+                value="custom"
+                {% if fade.get('type', 'custom') == 'custom' %}selected{% endif %}
+            >
+                Custom Channels
+            </option>
+            <option
+                value="scenes"
+                {% if fade.get('type') == 'scenes' %}selected{% endif %}
+            >
+                Scenes
+            </option>
+        </select>
 
-<input
-class="text-input btna"
-type="text"
-name="name"
-value="{{fade.name}}"
-required>
+        <div id="scene_options" style="display:none; margin-top:20px;">
+            <label>Start Scene</label>
+            <select class="btna" name="start_scene" id="start_scene">
+                {% for scene in scenes %}
+                <option
+                    value="{{ scene.id }}"
+                    {% if fade.get('start_scene')|string == scene.id|string %}selected{% endif %}
+                >
+                    {{ scene.name }}
+                </option>
+                {% endfor %}
+            </select>
 
+            <br><br>
 
-<br><br>
+            <label>Target Scene</label>
+            <select class="btna" name="end_scene" id="end_scene">
+                {% for scene in scenes %}
+                <option
+                    value="{{ scene.id }}"
+                    {% if fade.get('end_scene')|string == scene.id|string %}selected{% endif %}
+                >
+                    {{ scene.name }}
+                </option>
+                {% endfor %}
+            </select>
 
+            {% if scenes|length < 2 %}
+            <p>You need at least two scenes to configure a scene fade.</p>
+            {% endif %}
+        </div>
 
-<label>
-Duration
-</label>
+        <br><br>
 
+        <button class="btn-success save-button" type="submit">
+            Save
+        </button>
 
-<div class="form-grid">
-
-
-<input
-class="btna"
-type="number"
-name="duration"
-value="{{fade.get('duration',1000)}}"
-min="1">
-
-
-<select
-class="btna"
-name="duration_unit">
-
-
-<option value="ms">
-ms
-</option>
-
-
-<option value="sec">
-Seconds
-</option>
-
-
-<option value="min">
-Minutes
-</option>
-
-
-</select>
-
-
-</div>
-
-
-<br>
-
-
-<button
-class="btn-success"
-type="submit">
-
-Save
-
-</button>
-
-
-<button
-class="btna"
-type="button"
-onclick="window.location.href='/fades'">
-
-Cancel
-
-</button>
-
-
-</div>
-
-
+        <button
+            class="btna"
+            type="button"
+            onclick="window.location.href='/fades'"
+        >
+            Cancel
+        </button>
+    </div>
 </form>
 
-
-
-
-
-<div class="card">
-
-
-<h2>
-Devices
-</h2>
-
-
-
-<table class="data-table">
-
-
-<thead>
-
-<tr>
-
-<th>
-Device
-</th>
-
-<th>
-
-</th>
-
-<th>
-Start-channel
-</th>
-
-<th>
-Channels
-</th>
-
-<th>
-Action
-</th>
-
-</tr>
-
-</thead>
-
-
-
-<tbody>
-
-
-
-{% for fade_device in fade.get("devices",[]) %}
-
-
-
-{% for device in devices %}
-
-
-
-{% if device["id"]|int == fade_device.device|int %}
-
-
-
-<tr>
-
-
-<td>
-
-{{device.name}}
-
-</td>
-
-
-
-<td>
-
-
-<div
-style="
-width:22px;
-height:22px;
-border-radius:50%;
-background:{{device.color}};
-border:1px solid #555;
-">
-</div>
-
-
-</td>
-
-
-
-<td>
-
-{{device.start_channel}}
-
-</td>
-
-
-
-<td>
-
-{{device.channels}}
-
-</td>
-
-
-
-<td>
-
-
-<button
-class="btn-primary"
-type="button"
-style="background: #292929;"
-onclick="window.location.href='/fades/device?fade={{fade.id}}&device={{device.id}}'">
-
-Edit
-
-</button>
-
-
-</td>
-
-
-
-</tr>
-
-
-
-{% endif %}
-
-
-
-{% endfor %}
-
-
-
-{% endfor %}
-
-
-
-</tbody>
-
-
-</table>
-
-
-
+<div id="custom_options">
+    <div class="card">
+        <h2>Devices</h2>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Device</th>
+                    <th></th>
+                    <th>Start Channel</th>
+                    <th>Channels</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for fade_device in fade.get("devices", []) %}
+                    {% for device in devices %}
+                        {% if device["id"]|int == fade_device.device|int %}
+                        <tr>
+                            <td>{{ device.name }}</td>
+                            <td>
+                                <div style="
+                                    width:22px;
+                                    height:22px;
+                                    border-radius:50%;
+                                    background:{{ device.color }};
+                                    border:1px solid #555;
+                                "></div>
+                            </td>
+                            <td>{{ device.start_channel }}</td>
+                            <td>{{ device.channels }}</td>
+                            <td>
+                                <button
+                                    class="btn-primary"
+                                    type="button"
+                                    style="background:#292929;"
+                                    onclick="window.location.href='/fades/device?fade={{ fade.id }}&device={{ device.id }}'"
+                                >
+                                    Edit
+                                </button>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Add Device</h2>
+
+        <form action="/fades/device/add" method="post">
+            <input type="hidden" name="fade_id" value="{{ fade.id }}">
+
+            <select class="btna" name="device_id" required>
+                {% for device in devices %}
+                <option value="{{ device.id }}">{{ device.name }}</option>
+                {% endfor %}
+            </select>
+
+            <button class="btn-primary" type="submit">+ Add Device</button>
+        </form>
+    </div>
 </div>
 
 <div class="card">
+    <h2>Actions</h2>
 
-<h2>
-Add device
-</h2>
-
-
-<form action="/fades/device/add" method="post">
-
-<input
-type="hidden"
-name="fade_id"
-value="{{fade.id}}">
-
-
-<select
-class="btna"
-name="device_id">
-
-
-{% for d in devices %}
-
-<option value="{{d.id}}">
-{{d.name}}
-</option>
-
-{% endfor %}
-
-
-</select>
-
-
-<button
-class="btn-primary"
-type="submit">
-
-+ Add device
-
-</button>
-
-
-</form>
-
-</div>
-
-
-<div class="card">
-
-
-<h2>
-Actions
-</h2>
-
-
-<button
-class="btn-danger"
-type="button"
-onclick="deleteFade()">
-
-Delete Fade
-
-</button>
-
-
+    <button
+        class="btn-danger"
+        type="button"
+        onclick="deleteFade()"
+    >
+        Delete Fade
+    </button>
 </div>
 
 <script>
-function deleteFade(){
+function updateFadeType() {
+    const type = document.getElementById("fade_type").value;
+    const sceneOptions = document.getElementById("scene_options");
+    const customOptions = document.getElementById("custom_options");
+    const startScene = document.getElementById("start_scene");
+    const endScene = document.getElementById("end_scene");
 
-    if(confirm(
-        "Do you really want to delete this fade?"
-    )){
+    sceneOptions.style.display = type === "scenes" ? "block" : "none";
+    customOptions.style.display = type === "custom" ? "block" : "none";
 
-        window.location.href =
-        "/fades/delete?id={{fade.id}}";
+    startScene.required = type === "scenes";
+    endScene.required = type === "scenes";
 
+    if (type === "scenes" && (
+        startScene.options.length < 2 ||
+        endScene.options.length < 2
+    )) {
+        startScene.setCustomValidity("Create at least two scenes first.");
+        endScene.setCustomValidity("Create at least two scenes first.");
+    } else {
+        startScene.setCustomValidity("");
+        endScene.setCustomValidity("");
     }
-
 }
+
+function deleteFade() {
+    if (confirm("Do you really want to delete this fade?")) {
+        window.location.href = "/fades/delete?id={{ fade.id }}";
+    }
+}
+
+document.getElementById("fade_type").addEventListener("change", updateFadeType);
+updateFadeType();
 </script>
 
 {% endblock %}

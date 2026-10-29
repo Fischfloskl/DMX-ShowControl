@@ -1,0 +1,46 @@
+{
+    "id": "74346af8ec68466f92103448fd4092be",
+    "version": 2,
+    "name": "fast",
+    "use_global_settings": false,
+    "overrides": {
+        "device_index": 21,
+        "eq_weights": [
+            180,
+            300,
+            200,
+            80,
+            50,
+            40,
+            25,
+            15
+        ],
+        "min_interval_ms": 50,
+        "sensitivity": 208,
+        "source": "bass"
+    },
+    "reaction": {
+        "enabled": true,
+        "movement_speed": 0.85,
+        "color_change": 0.75,
+        "intensity": 0.9,
+        "strobe_enabled": true
+    },
+    "every_beats": 2,
+    "actions": [
+        {
+            "id": 1,
+            "enabled": true,
+            "type": "scene",
+            "target": "fast 1",
+            "phase": 0
+        },
+        {
+            "id": 2,
+            "enabled": true,
+            "type": "scene",
+            "target": "fast 2",
+            "phase": 1
+        }
+    ]
+}

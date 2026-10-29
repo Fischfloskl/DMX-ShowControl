@@ -6,7 +6,7 @@
         "port": 5000,
         "refresh_rate": 50,
         "create_qr": true,
-        "mode": "edit",
+        "mode": "show",
         "timing-global-record": "r",
         "timing-global-sim": "mediaplaypause",
         "timing-live": "arrowup",
@@ -18,7 +18,7 @@
                 "stop_with_app": true
             }
         ],
-        "midi_input_port": "",
+        "midi_input_port": "DMX-ShowCotrol MIDI 1 0",
         "midi_note_name_highest": "G8",
         "midi_note_name_lowest": "C-2",
         "midi_note_number_highest": 127,

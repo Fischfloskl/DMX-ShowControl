@@ -295,6 +295,38 @@ h3 {
 }
 
 
+/* Collapsible cards */
+.card-collapsed,
+.card-uncolapsed {
+    overflow: hidden;
+}
+
+.card-collapsed .card-header,
+.card-uncolapsed .card-header {
+    cursor: pointer;
+    user-select: none;
+    font-weight: bold;
+    font-size: large;
+}
+
+/* Hide card content when collapsed */
+.card-collapsed.is-collapsed > :not(.card-header) {
+    display: none;
+}
+
+/* Optional: indicate that the card can be toggled */
+.card-collapsed .card-header::after,
+.card-uncolapsed .card-header::after {
+    content: "▼";
+    float: right;
+    transition: transform 0.2s ease;
+}
+
+.card-collapsed.is-collapsed .card-header::after,
+.card-uncolapsed.is-collapsed .card-header::after {
+    transform: rotate(-180deg);
+}
+
 
 /* ---------------------------------
    BUTTONS

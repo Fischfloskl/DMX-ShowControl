@@ -1,507 +1,406 @@
-{% if mode == "edit" %}
 {% extends "base.html" %}
-{% else %}
-{% extends "show_base.html" %}
-{% endif %}
 
 {% block content %}
+
 <h1>Music Sync</h1>
 
-<!-- AUDIO SOURCE -->
-<div class="card">
-    <h2>Audioquelle</h2>
-    <p>
-        Wähle einen Windows-Audioausgang. Die Analyse läuft live;
-        es werden keine Audiodateien gespeichert.
-    </p>
-
-    <div class="scene-actions">
-        <select id="audio-device" aria-label="Audioquelle">
-            <option value="">Geräte werden geladen ...</option>
-        </select>
-
-        <button class="btn-primary" id="audio-start" type="button">
-            Audio starten
-        </button>
-
-        <button class="btn-danger" id="audio-stop" type="button" disabled>
-            Audio stoppen
-        </button>
-
-        <button class="btn-secondary" id="audio-refresh" type="button">
-            Geräte neu laden
-        </button>
-    </div>
-
-    <p id="audio-status">Status: nicht gestartet</p>
-    <p id="audio-error" class="error-message" role="alert"></p>
-</div>
-
-<!-- GENERAL AUDIO METERS -->
-<div class="card">
-    <h2>Live-Pegel</h2>
-
-    <div class="audio-meter">
-        <label for="meter-rms">Lautstärke (RMS)</label>
-        <progress id="meter-rms" max="1" value="0"></progress>
-        <span id="value-rms">0 %</span>
-    </div>
-
-    <div class="audio-meter">
-        <label for="meter-peak">Peak</label>
-        <progress id="meter-peak" max="1" value="0"></progress>
-        <span id="value-peak">0 %</span>
-    </div>
-
-    <div class="audio-meter">
-        <label for="meter-bass">Bass / Kick</label>
-        <progress id="meter-bass" max="1" value="0"></progress>
-        <span id="value-bass">0 %</span>
-    </div>
-
-    <div class="audio-meter">
-        <label for="meter-mid">Mitten</label>
-        <progress id="meter-mid" max="1" value="0"></progress>
-        <span id="value-mid">0 %</span>
-    </div>
-
-    <div class="audio-meter">
-        <label for="meter-treble">Höhen</label>
-        <progress id="meter-treble" max="1" value="0"></progress>
-        <span id="value-treble">0 %</span>
-    </div>
-</div>
-
-<!-- EIGHT BAND LIVE EQ -->
-<div class="card">
-    <h2>EQ-Live-Pegel</h2>
-    <p>Aktuelle Pegel der acht Frequenzbänder.</p>
-
-    {% for i in range(1, 9) %}
-    <div class="audio-meter">
-        <label for="meter-band-{{ i }}">EQ-Band {{ i }}</label>
-        <progress id="meter-band-{{ i }}" max="1" value="0"></progress>
-        <span id="value-band-{{ i }}">0 %</span>
-    </div>
-    {% endfor %}
-</div>
-
-<!-- MUSIC SYNC STATUS -->
-<div class="card">
-    <h2>Music Sync</h2>
-
-    <div class="scene-actions">
-        <button class="btn-primary" id="music-start" type="button">
-            Music Sync starten
-        </button>
-
-        <button class="btn-danger" id="music-stop" type="button">
-            Music Sync stoppen
-        </button>
-    </div>
-
-    <p id="music-status">Music Sync: gestoppt</p>
-    <p id="music-error" class="error-message" role="alert"></p>
-
-    <div class="music-stats">
-        <div class="music-stat">
-            <span>Erkannte Beats</span>
-            <strong id="music-beat-count">0</strong>
-        </div>
-
-        <div class="music-stat">
-            <span>Geschätztes Tempo</span>
-            <strong><span id="music-bpm">–</span> <small>BPM</small></strong>
-        </div>
-    </div>
-</div>
-
-<!-- BEAT DETECTION -->
-<div class="card">
-    <h2>Beat-Erkennung</h2>
-
-    <div class="setting">
-        <label for="beat-source">Frequenzquelle</label>
-        <select id="beat-source">
-            <option value="bass">Bass / Kick (Band 1 + 2)</option>
-            <option value="combined">Alle 8 EQ-Bänder</option>
-            <option value="band_1">Band 1 – Subbass / Kick</option>
-            <option value="band_2">Band 2 – Bass</option>
-            <option value="band_3">Band 3 – Oberbass</option>
-            <option value="band_4">Band 4 – Untere Mitten</option>
-            <option value="band_5">Band 5 – Mitten</option>
-            <option value="band_6">Band 6 – Obere Mitten</option>
-            <option value="band_7">Band 7 – Präsenz</option>
-            <option value="band_8">Band 8 – Höhen</option>
-        </select>
-    </div>
-
-    <div class="setting">
-        <div class="setting-heading">
-            <label for="beat-sensitivity">Empfindlichkeit</label>
-            <output id="sensitivity-value" for="beat-sensitivity">150 %</output>
-        </div>
-
-        <input
-            id="beat-sensitivity"
-            type="range"
-            min="1"
-            max="350"
-            step="1"
-            value="150"
-        >
-
-        <div class="range-labels">
-            <span>1 %</span>
-            <span>350 %</span>
-        </div>
-    </div>
-
-    <div class="setting">
-        <label for="beat-min-interval">
-            Mindestabstand zwischen Beats (ms)
-        </label>
-
-        <input
-            id="beat-min-interval"
-            type="number"
-            min="10"
-            max="2000"
-            step="1"
-            value="120"
-        >
-
-        <small>
-            Niedrigere Werte erlauben schnellere Beat-Erkennung.
-            Zu niedrige Werte können Fehlauslösungen verursachen.
-        </small>
-    </div>
-
-    <label class="checkbox-setting" for="music-enabled">
-        <input type="checkbox" id="music-enabled" class="checkbox">
-        Musikaktionen aktivieren
-    </label>
-</div>
-
-<!-- EQ WEIGHTS -->
-<div class="card">
-    <h2>8-Band-EQ für Music Sync</h2>
-
-    <p>
-        Die Gewichtungen beeinflussen, welche Frequenzbereiche
-        bei der Beat-Erkennung berücksichtigt werden.
-        0 % deaktiviert ein Band als Einflussquelle.
-    </p>
-
-    <div id="eq-controls"></div>
-</div>
-
-<!-- MUSIC ACTIONS -->
-<div class="card">
-    <h2>Musikaktionen</h2>
-
-    <p>
-        Aktionen werden anhand der erkannten Beats ausgelöst.
-        Der Zielname muss exakt dem Namen in DMXShowControl entsprechen.
-    </p>
-    
-    <div class="setting music-global-interval">
-        <label for="music-every-beats">Every N beats</label>
-        <input
-            id="music-every-beats"
-            type="number"
-            min="1"
-            max="256"
-            step="1"
-            value="1"
-        >
-        <small>
-            Shared beat interval for all enabled actions.
-        </small>
-    </div>
-
-    <div id="music-actions"></div>
-
-
-    <div id="music-actions"></div>
-
-    <div class="scene-actions">
-        <button class="btn-secondary" id="music-add-action" type="button">
-            + Aktion hinzufügen
-        </button>
-
-        <button class="btn-primary" id="music-save" type="button">
-            Einstellungen speichern
-        </button>
-    </div>
-</div>
-
 <style>
-.audio-meter {
+.audio-page {
     display: grid;
-    grid-template-columns: minmax(120px, 180px) minmax(80px, 1fr) 55px;
+    gap: 18px;
+}
+
+.audio-page .card {
+    padding: 20px;
+}
+
+.audio-page .toolbar {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
-    margin: 14px 0;
+    gap: 10px;
 }
 
-.audio-meter progress {
-    width: 100%;
-    height: 20px;
-}
-
-.audio-meter label {
-    overflow-wrap: anywhere;
-}
-
-.setting {
-    margin: 20px 0;
-}
-
-.setting > label,
-.setting-heading {
+.audio-page .status-line {
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
+    gap: 10px;
 }
 
-.setting input[type="number"],
-.setting select {
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 100%;
-}
-
-.setting input[type="range"] {
-    width: 100%;
-}
-
-.setting small {
-    display: block;
-    margin-top: 6px;
-    opacity: 0.75;
-}
-
-.range-labels {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.85em;
-    opacity: 0.7;
-}
-
-.music-stats {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 18px;
-}
-
-.music-stat {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 14px;
-    border: 1px solid var(--border-color, #555);
-    border-radius: 8px;
-    min-width: 0;
-}
-
-.music-stat strong {
-    font-size: 1.7rem;
-    overflow-wrap: anywhere;
-}
-
-.music-stat small {
-    font-size: 0.8rem;
-}
-
-.eq-control {
-    display: grid;
-    grid-template-columns: minmax(150px, 210px) minmax(80px, 1fr) 55px;
-    align-items: center;
-    gap: 12px;
-    margin: 16px 0;
-}
-
-.eq-control label {
-    overflow-wrap: anywhere;
-}
-
-.eq-control input[type="range"] {
-    width: 100%;
-    min-width: 0;
-}
-
-.eq-control output {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-}
-
-.music-action {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    padding: 14px;
-    margin: 14px 0;
-    border: 1px solid var(--border-color, #555);
-    border-radius: 8px;
-}
-
-.music-action label {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-}
-
-.music-action input:not([type="checkbox"]),
-.music-action select {
-    box-sizing: border-box;
-    width: 100%;
-    min-width: 0;
-}
-
-/* Custom toggle checkbox */
-input[type="checkbox"].checkbox {
-    appearance: none;
-    -webkit-appearance: none;
-
+.audio-page .status-dot {
     display: inline-block;
-    flex: 0 0 50px;
-
-    width: 50px !important;
-    min-width: 50px;
-    height: 26px !important;
-
-    margin: 0;
-    padding: 0;
-
-    position: relative;
-    box-sizing: border-box;
-
-    border: 1px solid #666;
-    border-radius: 20px;
-
-    background: #555;
-    cursor: pointer;
-
-    transition: background 0.2s, border-color 0.2s;
-}
-
-input[type="checkbox"].checkbox::before {
-    content: "";
-    position: absolute;
-
-    width: 20px;
-    height: 20px;
-
-    top: 2px;
-    left: 2px;
-
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    background: #fff;
-
-    transition: transform 0.2s;
+    background: #888;
 }
 
-input[type="checkbox"].checkbox:checked {
-    background: #00aa55;
-    border-color: #00aa55;
+.audio-page .status-dot.running {
+    background: #35bd72;
 }
 
-input[type="checkbox"].checkbox:checked::before {
-    transform: translateX(24px);
+.audio-page .status-dot.error {
+    background: #e05252;
 }
 
-input[type="checkbox"].checkbox:focus-visible {
-    outline: 2px solid #4fc3f7;
-    outline-offset: 3px;
+.audio-page .table-wrap {
+    width: 100%;
+    overflow-x: auto;
 }
 
-input[type="checkbox"].checkbox:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
+.audio-page table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 650px;
+    border-radius: 0 !important;
 }
 
-.music-action .action-enabled {
-    flex-direction: row;
-    align-items: center;
+.audio-page th,
+.audio-page td {
+    padding: 12px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color, #444);
+    vertical-align: middle;
 }
 
-.music-action .action-enabled input {
-    width: auto;
+.audio-page th {
+    font-weight: 600;
 }
 
-.music-action .action-delete {
-    grid-column: 1 / -1;
+.audio-page .row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
-.error-message {
-    color: #d9534f;
+.audio-page .row-actions button {
+    white-space: nowrap;
+}
+
+.audio-page .meter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+}
+
+.audio-page .meter {
+    margin-bottom: 12px;
+}
+
+.audio-page .meter-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.audio-page .meter-track {
+    height: 12px;
+    border-radius: 6px;
+    background: rgba(128, 128, 128, 0.25);
+    overflow: hidden;
+}
+
+.audio-page .meter-fill {
+    width: 0%;
+    height: 100%;
+    border-radius: 6px;
+    background: #45b97c;
+    transition: width 100ms linear;
+}
+
+.audio-page .meter-fill.peak {
+    background: #e4ad48;
+}
+
+.audio-page .meter-fill.band {
+    background: #609de8;
+}
+
+.audio-page .help-text {
+    opacity: 0.75;
+    font-size: 0.9em;
+}
+
+.audio-page .message {
+    margin-top: 12px;
     white-space: pre-wrap;
-    overflow-wrap: anywhere;
 }
 
-#audio-status {
-    overflow-wrap: anywhere;
+.audio-page .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
 }
 
-#audio-device {
-    max-width: 100%;
+.audio-page .stat {
+    padding: 14px;
+    border-radius: 8px;
+    background: rgba(128, 128, 128, 0.12);
+}
+
+.audio-page .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.audio-page .stat-label {
+    opacity: 0.75;
+    font-size: 0.9em;
+}
+
+.audio-page .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.audio-page .field {
+    display: grid;
+    gap: 7px;
+    margin-bottom: 14px;
+}
+
+.audio-page .field input,
+.audio-page .field select {
+    width: 100%;
+    max-width: 420px;
+    box-sizing: border-box;
+}
+
+.audio-page .sequence-name {
+    font-weight: 600;
+}
+
+.audio-page .active-label {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: rgba(53, 189, 114, 0.16);
+    font-size: 0.8em;
 }
 
 @media (max-width: 600px) {
-    .audio-meter {
-        grid-template-columns: minmax(0, 1fr) 55px;
-        gap: 6px 10px;
-    }
-
-    .audio-meter label {
-        grid-column: 1 / -1;
-    }
-
-    .audio-meter progress {
-        grid-column: 1;
-    }
-
-    .audio-meter span {
-        grid-column: 2;
-        text-align: right;
-    }
-
-    .eq-control {
-        grid-template-columns: minmax(0, 1fr) 55px;
-        gap: 6px 10px;
-    }
-
-    .eq-control label {
-        grid-column: 1 / -1;
-    }
-
-    .eq-control input[type="range"] {
-        grid-column: 1;
-    }
-
-    .eq-control output {
-        grid-column: 2;
-        grid-row: 2;
-    }
-
-    .music-action {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .music-action .action-delete {
-        grid-column: 1;
-    }
-
-    .music-stats {
-        grid-template-columns: 1fr 1fr;
+    .audio-page .card {
+        padding: 14px;
     }
 }
 </style>
+
+<div class="audio-page">
+
+    <!-- AUDIO INPUT -->
+
+    <section class="card" style="display: none;">
+        <h2>Audio Input</h2>
+
+        <p class="help-text">
+            The audio input is shared by the beat detector. Starting an audio sequence
+            will configure and start the required audio analysis automatically.
+        </p>
+
+        <div class="settings-grid">
+            <div class="field">
+                <label for="audio-device">Audio Device</label>
+
+                <select class="btna" id="audio-device">
+                    <option value="">Select an audio device</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label>Audio Status</label>
+
+                <div class="status-line">
+                    <span class="status-dot" id="audio-status-dot"></span>
+                    <span id="audio-status">Checking...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <button type="button" class="btn-primary" id="audio-start">
+                Start Audio Input
+            </button>
+
+            <button type="button" class="btna" id="audio-stop">
+                Stop Audio Input
+            </button>
+
+            <button type="button" class="btna" id="audio-refresh">
+                Refresh Devices
+            </button>
+        </div>
+
+        <div id="audio-error" class="message" role="status"></div>
+    </section>
+
+    <!-- AUDIO METERS -->
+
+    <section class="card card-collapsed">
+        <div class="card-header">
+            Audio Analysis
+        </div>
+        <br>
+        <br>
+        <div class="meter-grid">
+            <div>
+                <div class="meter">
+                    <div class="meter-label">
+                        <span>RMS</span>
+                        <span id="value-rms">0%</span>
+                    </div>
+                    <div class="meter-track">
+                        <div class="meter-fill" id="meter-rms"></div>
+                    </div>
+                </div>
+
+                <div class="meter">
+                    <div class="meter-label">
+                        <span>Peak</span>
+                        <span id="value-peak">0%</span>
+                    </div>
+                    <div class="meter-track">
+                        <div class="meter-fill peak" id="meter-peak"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="meter">
+                    <div class="meter-label">
+                        <span>Bass</span>
+                        <span id="value-bass">0%</span>
+                    </div>
+                    <div class="meter-track">
+                        <div class="meter-fill" id="meter-bass"></div>
+                    </div>
+                </div>
+
+                <div class="meter">
+                    <div class="meter-label">
+                        <span>Mid</span>
+                        <span id="value-mid">0%</span>
+                    </div>
+                    <div class="meter-track">
+                        <div class="meter-fill" id="meter-mid"></div>
+                    </div>
+                </div>
+
+                <div class="meter">
+                    <div class="meter-label">
+                        <span>Treble</span>
+                        <span id="value-treble">0%</span>
+                    </div>
+                    <div class="meter-track">
+                        <div class="meter-fill" id="meter-treble"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h3>EQ Bands</h3>
+        <div id="eq-meters" class="meter-grid"></div>
+    </section>
+
+    <!-- ACTIVE SEQUENCE STATUS -->
+
+    <section class="card card-collapsed">
+        <div class="card-header">
+            Music Sync Status
+        </div>
+        <br>
+        <br>
+        <div class="status-line">
+            <span class="status-dot" id="music-status-dot"></span>
+            <span id="music-status">No active audio sequence</span>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-label">Active Sequence</div>
+                <div class="stat-value" id="active-sequence-name">None</div>
+            </div>
+
+            <div class="stat">
+                <div class="stat-label">Detected Beats</div>
+                <div class="stat-value" id="music-beat-count">0</div>
+            </div>
+
+            <div class="stat">
+                <div class="stat-label">Estimated BPM</div>
+                <div class="stat-value" id="music-bpm">—</div>
+            </div>
+        </div>
+
+        <div class="toolbar" style="margin-top: 16px;">
+            <button type="button" class="btn-danger" id="stop-active-sequence">
+                Stop Active Sequence
+            </button>
+        </div>
+
+        <div id="music-error" class="message" role="status"></div>
+    </section>
+
+    <!-- AUDIO SEQUENCES -->
+
+    <section class="card">
+        <div class="toolbar">
+            <h2 style="margin: 0; flex: 1;">Audio Sequences</h2>
+
+            <button
+                type="button"
+                class="btn-primary"
+                id="create-sequence"
+            >
+                + Create Sequence
+            </button>
+
+            <button
+                type="button"
+                class="btna"
+                id="refresh-sequences"
+            >
+                Refresh
+            </button>
+        </div>
+
+        <p class="help-text">
+            Each audio sequence has its own beat detection settings and lighting actions.
+        </p>
+
+        <div class="status-line">
+            <span class="status-dot" id="sequence-status-dot"></span>
+            <span id="sequence-status">Loading sequences...</span>
+        </div>
+        <br>
+        <br>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody id="audio-sequences-body">
+                    <tr>
+                        <td colspan="4">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="sequence-message" class="message" role="status"></div>
+    </section>
+
+</div>
 
 <script>
 (() => {
@@ -509,667 +408,574 @@ input[type="checkbox"].checkbox:disabled {
 
     const $ = id => document.getElementById(id);
 
-    const deviceSelect = $("audio-device");
-    const audioStatus = $("audio-status");
-    const audioError = $("audio-error");
-    const audioStart = $("audio-start");
-    const audioStop = $("audio-stop");
-
-    const musicStatus = $("music-status");
-    const musicError = $("music-error");
-    const musicActions = $("music-actions");
-    const eqControls = $("eq-controls");
-
-    const defaultEqWeights = [180, 300, 200, 80, 50, 40, 25, 15];
-
-    const eqBands = [
-        { name: "Band 1 – Subbass / Kick", frequency: "30–90 Hz" },
-        { name: "Band 2 – Bass", frequency: "90–180 Hz" },
-        { name: "Band 3 – Oberbass", frequency: "180–350 Hz" },
-        { name: "Band 4 – Untere Mitten", frequency: "350–700 Hz" },
-        { name: "Band 5 – Mitten", frequency: "700–1400 Hz" },
-        { name: "Band 6 – Obere Mitten", frequency: "1,4–2,8 kHz" },
-        { name: "Band 7 – Präsenz", frequency: "2,8–6 kHz" },
-        { name: "Band 8 – Höhen", frequency: "6–12 kHz" }
-    ];
-
+    let activeSequence = null;
     let audioPollTimer = null;
     let musicPollTimer = null;
+    let sequencePollTimer = null;
+    let audioDevices = [];
+
+    const EQ_BANDS = [
+        "31–63 Hz",
+        "63–125 Hz",
+        "125–250 Hz",
+        "250–500 Hz",
+        "500 Hz–1 kHz",
+        "1–2 kHz",
+        "2–4 kHz",
+        "4–8 kHz"
+    ];
 
     async function api(url, options = {}) {
         const response = await fetch(url, {
             ...options,
             headers: {
-                ...(options.body ? { "Content-Type": "application/json" } : {}),
+                "Content-Type": "application/json",
                 ...(options.headers || {})
             }
         });
 
-        let data;
+        let data = {};
 
         try {
             data = await response.json();
-        } catch {
-            throw new Error(`Ungültige Serverantwort (HTTP ${response.status}).`);
+        } catch (_) {
+            // The endpoint may return plain text.
         }
 
-        if (!response.ok) {
-            throw new Error(data.error || `HTTP ${response.status}`);
+        if (!response.ok || data.success === false) {
+            throw new Error(data.error || `Request failed (${response.status})`);
         }
 
         return data;
     }
 
-    function showError(element, error) {
-        element.textContent = error?.message || String(error);
+    function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, char => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[char]);
     }
 
-    function setMeter(name, value) {
-        const progress = $(`meter-${name}`);
-        const output = $(`value-${name}`);
+    function setStatus(dotId, textId, text, state = "") {
+        $(textId).textContent = text;
+        $(dotId).classList.remove("running", "error");
 
-        if (!progress || !output) return;
-
-        const number = Number(value);
-        const safeValue = Number.isFinite(number)
-            ? Math.max(0, Math.min(1, number))
-            : 0;
-
-        progress.value = safeValue;
-        output.textContent = `${Math.round(safeValue * 100)} %`;
-    }
-
-    async function loadDevices() {
-        audioError.textContent = "";
-
-        const previousValue = deviceSelect.value;
-        deviceSelect.replaceChildren(
-            new Option("Geräte werden geladen ...", "")
-        );
-
-        try {
-            const data = await api("/api/audio/devices");
-            const devices = Array.isArray(data.devices) ? data.devices : [];
-
-            deviceSelect.replaceChildren();
-
-            if (devices.length === 0) {
-                deviceSelect.add(
-                    new Option("Keine Loopback-Geräte gefunden", "")
-                );
-                return;
-            }
-
-            devices.forEach(device => {
-                const label =
-                    `${device.name} (${device.sample_rate} Hz)`;
-
-                deviceSelect.add(
-                    new Option(label, String(device.index))
-                );
-            });
-
-            if ([...deviceSelect.options].some(
-                option => option.value === previousValue
-            )) {
-                deviceSelect.value = previousValue;
-            }
-        } catch (error) {
-            deviceSelect.replaceChildren(
-                new Option("Geräteliste nicht verfügbar", "")
-            );
-            showError(audioError, error);
+        if (state) {
+            $(dotId).classList.add(state);
         }
     }
 
-    async function pollAudioStatus() {
-        try {
-            const state = await api("/api/audio/status");
-
-            audioStatus.textContent = state.running
-                ? `Aktiv: ${state.device_name || "Audioquelle"} (${state.sample_rate || "?"} Hz)`
-                : "Status: nicht gestartet";
-
-            audioError.textContent = state.error || "";
-
-            setMeter("rms", state.rms);
-            setMeter("peak", state.peak);
-            setMeter("bass", state.bass);
-            setMeter("mid", state.mid);
-            setMeter("treble", state.treble);
-
-            const bands = Array.isArray(state.bands) ? state.bands : [];
-
-            for (let index = 0; index < 8; index++) {
-                setMeter(`band-${index + 1}`, bands[index] ?? 0);
-            }
-
-            audioStart.disabled = Boolean(state.running);
-            audioStop.disabled = !state.running;
-        } catch (error) {
-            showError(audioError, error);
-        }
+    function setMessage(id, message) {
+        $(id).textContent = message || "";
     }
 
-    audioStart.addEventListener("click", async () => {
-        audioError.textContent = "";
+    function normaliseSequenceList(data) {
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data.sequences)) return data.sequences;
+        return [];
+    }
 
-        if (deviceSelect.value === "") {
-            audioError.textContent = "Bitte zuerst eine Audioquelle wählen.";
+        
+    function getSequenceName(sequence) {
+        return sequence.name || sequence.filename || sequence.file || "";
+    }
+
+    function getSequenceDescription(sequence) {
+        return sequence.description || "";
+    }
+
+    function getSequenceId(sequence) {
+        return sequence.id || sequence.sequence_id || null;
+    }
+
+    function renderSequences(sequences) {
+        const body = $("audio-sequences-body");
+        body.innerHTML = "";
+
+        if (!sequences.length) {
+            body.innerHTML = `
+                <tr>
+                    <td colspan="4">
+                        No audio sequences found. Create one to get started.
+                    </td>
+                </tr>
+            `;
             return;
         }
 
-        audioStart.disabled = true;
+        sequences.forEach(sequence => {
+            const id = getSequenceId(sequence);
+            const name = getSequenceName(sequence);
+            const description = getSequenceDescription(sequence);
+
+            const isActive =
+                id !== null &&
+                String(id) === String(activeSequence);
+
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>
+                    <span class="sequence-name">${escapeHTML(name)}</span>
+                    ${isActive ? '<span class="active-label">Active</span>' : ""}
+                </td>
+                <td>${escapeHTML(description || "—")}</td>
+                <td>${isActive ? "Running" : "Stopped"}</td>
+                <td>
+                    <div class="row-actions">
+                        <button
+                            type="button"
+                            class="btn-success"
+                            data-action="start"
+                            data-id="${escapeHTML(id ?? "")}"
+                            ${!id || isActive ? "disabled" : ""}
+                        >${isActive ? "Started" : "Start"}</button>
+
+                        <button
+                            type="button"
+                            class="btna"
+                            style="background: #121212"
+                            data-action="edit"
+                            data-id="${escapeHTML(id ?? "")}"
+                            ${!id ? "disabled" : ""}
+                        >Edit</button>
+
+                        <button
+                            type="button"
+                            class="btn-danger"
+                            data-action="delete"
+                            data-id="${escapeHTML(id ?? "")}"
+                            ${!id ? "disabled" : ""}
+                        >Delete</button>
+                    </div>
+                </td>
+            `;
+
+            body.appendChild(row);
+        });
+    }
+
+    async function loadSequences() {
+        try {
+            const data = await api("/api/audio-sequences");
+            const sequences = normaliseSequenceList(data);
+
+            renderSequences(sequences);
+
+            setStatus(
+                "sequence-status-dot",
+                "sequence-status",
+                `${sequences.length} audio sequence${sequences.length === 1 ? "" : "s"} available`,
+                ""
+            );
+        } catch (error) {
+            setStatus(
+                "sequence-status-dot",
+                "sequence-status",
+                "Could not load audio sequences",
+                "error"
+            );
+
+            setMessage("sequence-message", error.message);
+        }
+    }
+
+    async function refreshActiveSequence() {
+        try {
+            const data = await api("/api/audio-sequences/active");
+            const state = data.state || data;
+
+            activeSequence =
+                state.active_sequence_id ??
+                state.active_sequence ??
+                data.active_sequence_id ??
+                data.active_sequence ??
+                null;
+
+            const activeName = state.active_sequence_name || null;
+
+            $("active-sequence-name").textContent =
+                activeName || (activeSequence ? activeSequence : "None");
+
+            if (activeSequence) {
+                setStatus(
+                    "music-status-dot",
+                    "music-status",
+                    `Running: ${activeName || activeSequence}`,
+                    "running"
+                );
+            } else {
+                setStatus(
+                    "music-status-dot",
+                    "music-status",
+                    "No active audio sequence",
+                    ""
+                );
+            }
+
+            await loadSequences();
+        } catch (error) {
+            setStatus(
+                "music-status-dot",
+                "music-status",
+                "Unable to read sequence status",
+                "error"
+            );
+        }
+    }
+
+    async function startSequence(id) {
+        setMessage("sequence-message", "");
+
+        if (!id) {
+            setMessage("sequence-message", "Missing audio sequence ID.");
+            return;
+        }
+
+        try {
+            const data = await api(
+                `/api/audio-sequences/${encodeURIComponent(id)}/start`,
+                { method: "POST", body: "{}" }
+            );
+
+            activeSequence =
+                data.sequence_id ??
+                data.active_sequence_id ??
+                data.active_sequence ??
+                id;
+
+            setMessage(
+                "sequence-message",
+                `Started "${data.sequence_name || id}".`
+            );
+
+            await Promise.all([
+                refreshActiveSequence(),
+                pollMusicStatus(),
+                pollAudioStatus()
+            ]);
+        } catch (error) {
+            setMessage("sequence-message", error.message);
+        }
+    }
+
+    function editSequence(id) {
+        if (!id) return;
+
+        window.location.href =
+            `/audio-sequences/edit?id=${encodeURIComponent(id)}`;
+    }
+
+    async function deleteSequence(id) {
+        if (!id) {
+            setMessage("sequence-message", "Missing audio sequence ID.");
+            return;
+        }
+
+        if (!confirm(`Delete audio sequence "${id}"?`)) return;
+
+        try {
+            await api(
+                `/api/audio-sequences/${encodeURIComponent(id)}`,
+                { method: "DELETE" }
+            );
+
+            setMessage("sequence-message", "Audio sequence deleted.");
+
+            await loadSequences();
+            await refreshActiveSequence();
+        } catch (error) {
+            setMessage("sequence-message", error.message);
+        }
+    }
+
+
+    async function loadAudioDevices() {
+        try {
+            const data = await api("/api/audio/devices");
+            audioDevices = data.devices || [];
+
+            const select = $("audio-device");
+            const previousValue = select.value;
+
+            select.innerHTML = '<option value="">Select an audio device</option>';
+
+            audioDevices.forEach(device => {
+                const index = device.index ?? device.device_index;
+                if (index === undefined || index === null) return;
+
+                const option = document.createElement("option");
+                option.value = index;
+                option.textContent = device.name || `Audio Device ${index}`;
+                select.appendChild(option);
+            });
+
+            if (previousValue) select.value = previousValue;
+        } catch (error) {
+            setMessage("audio-error", `Could not load audio devices: ${error.message}`);
+        }
+    }
+
+    async function startAudioInput() {
+        const selected = $("audio-device").value;
+
+        if (selected === "") {
+            setMessage("audio-error", "Please select an audio device.");
+            return;
+        }
 
         try {
             await api("/api/audio/start", {
                 method: "POST",
-                body: JSON.stringify({
-                    device_index: Number(deviceSelect.value)
-                })
+                body: JSON.stringify({ device_index: Number(selected) })
             });
 
+            setMessage("audio-error", "Audio input started.");
             await pollAudioStatus();
         } catch (error) {
-            showError(audioError, error);
-            audioStart.disabled = false;
+            setMessage("audio-error", error.message);
         }
-    });
+    }
 
-    audioStop.addEventListener("click", async () => {
-        audioStop.disabled = true;
-
+    async function stopAudioInput() {
         try {
-            await api("/api/audio/stop", { method: "POST" });
-            await pollAudioStatus();
-        } catch (error) {
-            showError(audioError, error);
-            audioStop.disabled = false;
-        }
-    });
-
-    $("audio-refresh").addEventListener("click", loadDevices);
-
-    // EQ-Gewichtungsregler erzeugen
-    function renderEQControls(weights = defaultEqWeights) {
-        eqControls.replaceChildren();
-
-        eqBands.forEach((band, index) => {
-            const wrapper = document.createElement("div");
-            wrapper.className = "eq-control";
-
-            const label = document.createElement("label");
-            label.htmlFor = `eq-weight-${index}`;
-            label.textContent = `${band.name} (${band.frequency})`;
-
-            const slider = document.createElement("input");
-            slider.type = "range";
-            slider.id = `eq-weight-${index}`;
-            slider.className = "eq-weight";
-            slider.min = "0";
-            slider.max = "350";
-            slider.step = "5";
-
-            const configuredWeight = Number(weights[index]);
-            slider.value = Number.isFinite(configuredWeight)
-                ? Math.max(0, Math.min(350, configuredWeight))
-                : defaultEqWeights[index];
-
-            const output = document.createElement("output");
-            output.htmlFor = slider.id;
-            output.textContent = `${slider.value} %`;
-
-            slider.addEventListener("input", () => {
-                output.textContent = `${slider.value} %`;
+            await api("/api/audio/stop", {
+                method: "POST",
+                body: "{}"
             });
 
-            wrapper.append(label, slider, output);
-            eqControls.appendChild(wrapper);
-        });
-    }
-
-    function readEQWeights() {
-        return [...eqControls.querySelectorAll(".eq-weight")]
-            .map(slider => Number(slider.value));
-    }
-
-    // Musikaktionen
-    function createMusicAction(action = {}) {
-        const row = document.createElement("div");
-        row.className = "music-action";
-
-        const typeLabel = document.createElement("label");
-        typeLabel.appendChild(document.createTextNode("Aktionstyp"));
-
-        const type = document.createElement("select");
-
-        [
-            ["scene", "Szene"],
-            ["fade", "Fade"],
-            ["sequence", "Sequence"]
-        ].forEach(([value, label]) => {
-            type.add(new Option(label, value));
-        });
-
-        type.value = ["scene", "fade", "sequence"].includes(action.type)
-            ? action.type
-            : "scene";
-
-        typeLabel.appendChild(type);
-
-        const targetLabel = document.createElement("label");
-        targetLabel.appendChild(document.createTextNode("Zielname"));
-
-        const target = document.createElement("input");
-        target.type = "text";
-        target.required = true;
-        target.placeholder = "Exakter Name des Ziels";
-        target.value = action.target || "";
-        targetLabel.appendChild(target);
-
-        const everyLabel = document.createElement("label");
-        everyLabel.appendChild(document.createTextNode("Alle N Beats"));
-
-        const every = document.createElement("input");
-        every.type = "number";
-        every.min = "1";
-        every.max = "256";
-        every.step = "1";
-        every.value = action.every_beats ?? 1;
-        everyLabel.appendChild(every);
-
-        
-        const phaseLabel = document.createElement("label");
-        phaseLabel.appendChild(
-            document.createTextNode("Phase (0 to N−1)")
-        );
-
-        const phase = document.createElement("input");
-        phase.type = "number";
-        phase.min = "0";
-        phase.step = "1";
-        phase.value = action.phase ?? 0;
-        phaseLabel.appendChild(phase);
-
-        function validatePhase() {
-            const n = Math.max(
-                1,
-                Math.min(256, Number($("music-every-beats").value) || 1)
-            );
-
-            phase.max = String(n - 1);
-
-            const currentPhase = Number(phase.value) || 0;
-            phase.value = String(
-                Math.max(0, Math.min(n - 1, currentPhase))
-            );
+            setMessage("audio-error", "Audio input stopped.");
+            await pollAudioStatus();
+        } catch (error) {
+            setMessage("audio-error", error.message);
         }
-
-        phase.addEventListener("change", validatePhase);
-        validatePhase();
-
-
-        const enabledLabel = document.createElement("label");
-        enabledLabel.className = "action-enabled checkbox-setting";
-
-        const enabled = document.createElement("input");
-        enabled.type = "checkbox";
-        enabled.className = "checkbox action-enabled";
-        enabled.checked = action.enabled !== false;
-
-        enabledLabel.append(
-            enabled,
-            document.createTextNode(" Aktiv")
-        );
-
-        const remove = document.createElement("button");
-        remove.type = "button";
-        remove.className = "btn-danger action-delete";
-        remove.textContent = "Aktion entfernen";
-        remove.addEventListener("click", () => row.remove());
-
-        row.append(
-            typeLabel,
-            targetLabel,
-            phaseLabel,
-            enabledLabel,
-            remove
-        );
-
-        musicActions.appendChild(row);
     }
 
     
-    function readMusicActions() {
-        return [...musicActions.querySelectorAll(".music-action")]
-            .map((row, index) => {
-                const fields = row.querySelectorAll("input, select");
+    function setMeter(name, value, isPercent = false) {
+        const numeric = Number(value);
 
-                return {
-                    id: index + 1,
-                    type: fields[0].value,
-                    target: fields[1].value.trim(),
-                    phase: Number(fields[2].value),
-                    enabled: fields[3].checked
-                };
-            });
+        let percent = 0;
+
+        if (Number.isFinite(numeric) && numeric > 0) {
+            if (isPercent) {
+                // API already provides a percentage.
+                percent = numeric;
+            } else {
+                // Visually boost normalized audio levels.
+                percent = Math.pow(Math.min(1, numeric * 3), 0.65) * 100;
+            }
+        }
+
+        percent = Math.max(0, Math.min(100, percent));
+
+        const bar = $(`meter-${name}`);
+        const label = $(`value-${name}`);
+
+        if (bar) bar.style.width = `${percent}%`;
+        if (label) label.textContent = `${Math.round(percent)}%`;
     }
 
 
-    // Konfiguration speichern
-    async function saveMusicConfig() {
-        musicError.textContent = "";
-
-        const intervalInput = $("beat-min-interval");
-        let interval = Number(intervalInput.value);
-
-        if (!Number.isFinite(interval)) {
-            interval = 120;
-        }
-
-        interval = Math.max(10, Math.min(2000, Math.round(interval)));
-        intervalInput.value = String(interval);
-
-        
-        const everyInput = $("music-every-beats");
-        let everyBeats = Number(everyInput.value);
-
-        if (!Number.isInteger(everyBeats)) {
-            everyBeats = 1;
-        }
-
-        everyBeats = Math.max(1, Math.min(256, everyBeats));
-        everyInput.value = String(everyBeats);
-
-        const actions = readMusicActions();
-        
-        for (const action of actions) {
-            if (!action.target) {
-                throw new Error(
-                    "Please enter a target name for every music action."
-                );
-            }
-
-            if (
-                !Number.isInteger(action.phase) ||
-                action.phase < 0 ||
-                action.phase >= everyBeats
-            ) {
-                throw new Error(
-                    `Each phase must be between 0 and ${everyBeats - 1}.`
-                );
+    function readValue(object, ...keys) {
+        for (const key of keys) {
+            if (object && object[key] !== undefined && object[key] !== null) {
+                return object[key];
             }
         }
+        return 0;
+    }
 
+    function createEQMeters() {
+        const container = $("eq-meters");
+        container.innerHTML = "";
 
-        const data = {
-            beat: {
-                source: $("beat-source").value,
-                sensitivity: Number($("beat-sensitivity").value),
-                min_interval_ms: interval,
-                eq_weights: readEQWeights()
-            },
-            show: {
-                enabled: $("music-enabled").checked,
-                every_beats: everyBeats,
-                actions
-            }
-        };
+        EQ_BANDS.forEach((label, index) => {
+            const number = index + 1;
+            const item = document.createElement("div");
+            item.className = "meter";
 
-        const result = await api("/api/music/config", {
-            method: "POST",
-            body: JSON.stringify(data)
+            item.innerHTML = `
+                <div class="meter-label">
+                    <span>${label}</span>
+                    <span id="value-band-${number}">0%</span>
+                </div>
+                <div class="meter-track">
+                    <div class="meter-fill band" id="meter-band-${number}"></div>
+                </div>
+            `;
+
+            container.appendChild(item);
         });
-
-        if (result.success === false) {
-            throw new Error(result.error || "Einstellungen konnten nicht gespeichert werden.");
-        }
-
-        musicError.textContent = "Einstellungen gespeichert.";
-        return result;
     }
 
-    // Konfiguration laden
-    async function loadMusicConfig() {
+    async function pollAudioStatus() {
         try {
-            const result = await api("/api/music/config");
-            const beat = result.beat || {};
-            const show = result.show || {};
-            
-            const everyBeats = Number(show.every_beats ?? 1);
-            $("music-every-beats").value = String(
-                Math.max(
-                    1,
-                    Math.min(256, Number.isFinite(everyBeats) ? everyBeats : 1)
-                )
+            const data = await api("/api/audio/status");
+            const state = data.audio || data.state || data;
+
+            const running = Boolean(state.running);
+
+            setStatus(
+                "audio-status-dot",
+                "audio-status",
+                running ? "Audio input running" : "Audio input stopped",
+                running ? "running" : ""
             );
 
-            $("beat-source").value = beat.source || "bass";
+            setMeter("rms", readValue(state, "rms_percent", "rms"));
+            setMeter("peak", readValue(state, "peak_percent", "peak"));
+            setMeter("bass", readValue(state, "bass_percent", "bass"));
+            setMeter("mid", readValue(state, "mid_percent", "mid"));
+            setMeter("treble", readValue(state, "treble_percent", "treble"));
 
-            const sensitivity = Number(beat.sensitivity ?? 150);
-            $("beat-sensitivity").value =
-                Math.max(1, Math.min(350, sensitivity));
+            const bands = state.bands || state.eq_bands || [];
 
-            $("sensitivity-value").textContent =
-                `${$("beat-sensitivity").value} %`;
+            if (Array.isArray(bands)) {
+                bands.forEach((value, index) => {
+                    if (index < 8) setMeter(`band-${index + 1}`, value);
+                });
+            } else if (bands && typeof bands === "object") {
+                for (let i = 1; i <= 8; i++) {
+                    setMeter(`band-${i}`, bands[`band_${i}`] ?? bands[i - 1] ?? 0);
+                }
+            }
 
-            const interval = Number(beat.min_interval_ms ?? 120);
-            $("beat-min-interval").value =
-                Math.max(10, Math.min(2000, interval));
-
-            $("music-enabled").checked = Boolean(show.enabled);
-
-            const weights = Array.isArray(beat.eq_weights)
-                ? beat.eq_weights
-                : defaultEqWeights;
-
-            renderEQControls(weights);
-
-            musicActions.replaceChildren();
-
-            const actions = Array.isArray(show.actions)
-                ? show.actions
-                : [];
-
-            actions.forEach(createMusicAction);
-
-            musicError.textContent = "";
+            if (state.error) {
+                setMessage("audio-error", state.error);
+            }
         } catch (error) {
-            showError(musicError, error);
+            setStatus(
+                "audio-status-dot",
+                "audio-status",
+                "Audio status unavailable",
+                "error"
+            );
         }
     }
-
-    $("beat-sensitivity").addEventListener("input", event => {
-        $("sensitivity-value").textContent = `${event.target.value} %`;
-    });
-
-    $("beat-min-interval").addEventListener("change", event => {
-        let value = Number(event.target.value);
-
-        if (!Number.isFinite(value)) value = 120;
-
-        event.target.value = String(
-            Math.max(10, Math.min(2000, Math.round(value)))
-        );
-    });
-
-    
-    $("music-every-beats").addEventListener("change", event => {
-        let value = Number(event.target.value);
-
-        if (!Number.isInteger(value)) {
-            value = 1;
-        }
-
-        value = Math.max(1, Math.min(256, value));
-        event.target.value = String(value);
-
-        musicActions.querySelectorAll(".music-action").forEach(row => {
-            const fields = row.querySelectorAll("input, select");
-            const phase = fields[2];
-
-            phase.max = String(value - 1);
-
-            const currentPhase = Number(phase.value) || 0;
-            phase.value = String(
-                Math.max(0, Math.min(value - 1, currentPhase))
-            );
-        });
-    });
-
-
-    $("music-add-action").addEventListener("click", () => {
-        createMusicAction();
-    });
-
-    $("music-save").addEventListener("click", async () => {
-        try {
-            await saveMusicConfig();
-        } catch (error) {
-            showError(musicError, error);
-        }
-    });
-
-    $("music-start").addEventListener("click", async () => {
-        try {
-            // Erst die aktuellen Einstellungen speichern
-            await saveMusicConfig();
-
-            // Die Beat-Erkennung benötigt eine laufende Audioquelle
-            const audio = await api("/api/audio/status");
-
-            if (!audio.running) {
-                throw new Error(
-                    "Bitte zuerst die Audioquelle starten."
-                );
-            }
-
-            const result = await api("/api/music/start", {
-                method: "POST"
-            });
-
-            if (result.success === false) {
-                throw new Error(
-                    result.error || "Music Sync konnte nicht gestartet werden."
-                );
-            }
-
-            musicError.textContent = "";
-            await pollMusicStatus();
-        } catch (error) {
-            showError(musicError, error);
-        }
-    });
-
-    $("music-stop").addEventListener("click", async () => {
-        try {
-            const result = await api("/api/music/stop", {
-                method: "POST"
-            });
-
-            if (result.success === false) {
-                throw new Error(
-                    result.error || "Music Sync konnte nicht gestoppt werden."
-                );
-            }
-
-            musicError.textContent = "";
-            await pollMusicStatus();
-        } catch (error) {
-            showError(musicError, error);
-        }
-    });
 
     async function pollMusicStatus() {
         try {
-            const result = await api("/api/music/status");
-            const beat = result.beat || {};
-            const show = result.show || {};
+            const data = await api("/api/music/status");
+            const beat = data.beat || {};
+            const show = data.show || {};
 
-            $("music-beat-count").textContent = beat.beat_count ?? 0;
+            $("music-beat-count").textContent =
+                readValue(beat, "beat_count", "beats") || 0;
 
-            const bpm = Number(beat.bpm ?? 0);
-            $("music-bpm").textContent =
-                Number.isFinite(bpm) && bpm > 0
-                    ? Math.round(bpm)
-                    : "–";
-
-            $("music-status").textContent = show.running
-                ? "Music Sync: aktiv"
-                : beat.running
-                    ? "Beat-Erkennung: aktiv"
-                    : "Music Sync: gestoppt";
+            const bpm = readValue(beat, "bpm", "estimated_bpm");
+            $("music-bpm").textContent = bpm ? Math.round(bpm) : "—";
 
             if (show.last_error) {
-                musicError.textContent = show.last_error;
+                setMessage("music-error", show.last_error);
             } else if (beat.error) {
-                musicError.textContent = beat.error;
+                setMessage("music-error", beat.error);
             }
-        } catch (error) {
-            showError(musicError, error);
+        } catch (_) {
+            // Sequence status remains available even if legacy music status is unavailable.
         }
     }
 
-    // Initialisieren
-    renderEQControls();
-    loadDevices();
-    loadMusicConfig();
-    pollAudioStatus();
-    pollMusicStatus();
+    $("create-sequence").addEventListener("click", createSequence);
+    $("refresh-sequences").addEventListener("click", loadSequences);
+    $("stop-active-sequence").addEventListener("click", stopSequence);
 
-    // Polling unabhängig vom Start-Button aktiv halten.
-    // So wird auch ein bereits laufender Audio-Stream angezeigt.
-    audioPollTimer = setInterval(pollAudioStatus, 200);
-    musicPollTimer = setInterval(pollMusicStatus, 250);
-})();
+    $("audio-refresh").addEventListener("click", loadAudioDevices);
+    $("audio-start").addEventListener("click", startAudioInput);
+    $("audio-stop").addEventListener("click", stopAudioInput);
 
+    $("audio-sequences-body").addEventListener("click", event => {
+        const button = event.target.closest("button[data-action]");
+        if (!button || button.disabled) return;
 
-async function stopAudioSequence() {
-    const stopButtons = document.querySelectorAll(
-        '[data-action="stop-audio-sequence"]'
-    );
+        const id = button.dataset.id;
+        const action = button.dataset.action;
 
-    stopButtons.forEach(button => {
-        button.disabled = true;
+        if (action === "start") startSequence(id);
+        if (action === "edit") editSequence(id);
+        if (action === "delete") deleteSequence(id);
     });
 
-    try {
-        const response = await fetch("/api/audio-sequences/stop", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            }
-        });
 
-        const result = await response.json();
+    async function initialise() {
+        createEQMeters();
 
-        if (!response.ok || result.success === false) {
-            throw new Error(
-                result.error || "Failed to stop audio sequence."
-            );
-        }
+        await Promise.allSettled([
+            loadSequences(),
+            refreshActiveSequence(),
+            loadAudioDevices(),
+            pollAudioStatus(),
+            pollMusicStatus()
+        ]);
 
-        const activeStatus = document.getElementById(
-            "audio-sequence-active"
-        );
-
-        if (activeStatus) {
-            activeStatus.textContent = "No audio sequence active";
-        }
-
-        // Refresh sequence table and active status if available.
-        if (typeof loadAudioSequences === "function") {
-            await loadAudioSequences();
-        }
-    } catch (error) {
-        console.error("Could not stop audio sequence:", error);
-        alert(error.message || "Could not stop audio sequence.");
-    } finally {
-        stopButtons.forEach(button => {
-            button.disabled = false;
-        });
+        audioPollTimer = setInterval(pollAudioStatus, 250);
+        musicPollTimer = setInterval(pollMusicStatus, 500);
+        sequencePollTimer = setInterval(async () => {
+            await refreshActiveSequence();
+            await loadSequences();
+        }, 2000);
     }
-}
 
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+            clearInterval(audioPollTimer);
+            clearInterval(musicPollTimer);
+            clearInterval(sequencePollTimer);
+        } else {
+            audioPollTimer = setInterval(pollAudioStatus, 250);
+            musicPollTimer = setInterval(pollMusicStatus, 500);
+            sequencePollTimer = setInterval(async () => {
+                await refreshActiveSequence();
+                await loadSequences();
+            }, 2000);
+        }
+    });
+
+    initialise();
+
+    function getDisplayLevel(value) {
+        const level = Number(value);
+
+        if (!Number.isFinite(level) || level <= 0) {
+            return 0;
+        }
+
+        return Math.min(1, Math.pow(Math.min(1, level * 3), 0.65));
+    }
+
+    async function createSequence() {
+        // Open the editor in new-sequence mode.
+        // No sequence is created on the server at this point.
+        window.location.href = "/audio-sequences/edit?mode=new";
+    }
+    
+    async function stopSequence() {
+        setMessage("music-error", "");
+
+        try {
+            await api("/api/audio-sequences/stop", {
+                method: "POST",
+                body: "{}"
+            });
+
+            activeSequence = null;
+
+            setMessage("music-error", "Audio sequence stopped.");
+
+            await Promise.all([
+                refreshActiveSequence(),
+                pollMusicStatus(),
+                pollAudioStatus(),
+                loadSequences()
+            ]);
+        } catch (error) {
+            setMessage("music-error", error.message);
+        }
+    }
+})();
 </script>
+
 {% endblock %}

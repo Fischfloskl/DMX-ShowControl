@@ -1,5 +1,32 @@
 {
     "type": "sequences",
     "version": 1,
-    "data": []
+    "data": [
+        {
+            "id": 1,
+            "steps": [
+                {
+                    "action": "fade",
+                    "time": 2500,
+                    "target": "testw"
+                },
+                {
+                    "action": "fade",
+                    "time": 2500,
+                    "target": "testw 2"
+                },
+                {
+                    "action": "fade",
+                    "time": 2500,
+                    "target": "testw"
+                },
+                {
+                    "action": "fade",
+                    "time": 2500,
+                    "target": "testw 2"
+                }
+            ],
+            "name": "test 2.1"
+        }
+    ]
 }

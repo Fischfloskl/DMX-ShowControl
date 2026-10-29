@@ -1,5 +1,314 @@
 {
     "type": "fades",
     "version": 1,
-    "data": []
+    "data": [
+        {
+            "id": 1,
+            "name": "1",
+            "duration": 5000,
+            "mode": "exclusive",
+            "devices": [
+                {
+                    "device": 1,
+                    "channels": [
+                        {
+                            "channel": 1,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 2,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 3,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 4,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 5,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 6,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 7,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 255
+                        },
+                        {
+                            "channel": 8,
+                            "enabled": true,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 9,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 10,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 0
+                        },
+                        {
+                            "channel": 11,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 12,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 0
+                        },
+                        {
+                            "channel": 13,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 14,
+                            "enabled": true,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 15,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 16,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 17,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 18,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 19,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 20,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 21,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 2,
+            "name": "2",
+            "duration": 5000,
+            "mode": "exclusive",
+            "devices": [
+                {
+                    "device": 1,
+                    "channels": [
+                        {
+                            "channel": 1,
+                            "enabled": true,
+                            "start": 60,
+                            "end": 25
+                        },
+                        {
+                            "channel": 2,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 3,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 4,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 5,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 6,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 7,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 255
+                        },
+                        {
+                            "channel": 8,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 0
+                        },
+                        {
+                            "channel": 9,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 10,
+                            "enabled": true,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 11,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 12,
+                            "enabled": true,
+                            "start": 255,
+                            "end": 0
+                        },
+                        {
+                            "channel": 13,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 14,
+                            "enabled": true,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 15,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 16,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 17,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 18,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 19,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 20,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        },
+                        {
+                            "channel": 21,
+                            "enabled": false,
+                            "start": 0,
+                            "end": 255
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": 3,
+            "name": "testw",
+            "duration": 2000,
+            "mode": "merge",
+            "devices": [
+                {
+                    "device": 1,
+                    "channels": []
+                }
+            ],
+            "type": "scenes",
+            "start_scene": 2,
+            "end_scene": 3
+        },
+        {
+            "id": 4,
+            "name": "testw 2",
+            "duration": 2000,
+            "mode": "merge",
+            "devices": [
+                {
+                    "device": 1,
+                    "channels": []
+                }
+            ],
+            "type": "scenes",
+            "start_scene": 3,
+            "end_scene": 2
+        }
+    ]
 }

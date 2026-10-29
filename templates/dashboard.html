@@ -183,9 +183,11 @@ socket.on(
 
 function reconnect(){
 
-    if(!confirm("Reconnect DMX-console? ~5 sec."))
-        return;
-
+    //if(!confirm("Reconnect DMX-console? ~5 sec."))
+    //return;
+    status.innerHTML = "Connecting...";
+    status.className =
+        "status-offline";
 
     fetch(
         "/api/reconnect",

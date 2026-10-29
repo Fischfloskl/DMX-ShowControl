@@ -1,0 +1,821 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Edit Audio Sequence</h1>
+
+<style>
+.audio-editor {
+    display: grid;
+    gap: 18px;
+}
+
+.audio-editor .card {
+    padding: 20px;
+}
+
+.audio-editor .field {
+    display: grid;
+    gap: 7px;
+    margin-bottom: 16px;
+}
+
+.audio-editor .field label,
+.audio-editor .section-label {
+    font-weight: 600;
+}
+
+.audio-editor input[type="text"],
+.audio-editor input[type="number"],
+.audio-editor select,
+.audio-editor textarea {
+    width: 100%;
+    max-width: 520px;
+    box-sizing: border-box;
+}
+
+.audio-editor .inline-field {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.audio-editor .action-card {
+    border: 1px solid var(--border-color, #444);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+}
+
+.audio-editor .action-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.audio-editor .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.audio-editor .suggestions button {
+    cursor: pointer;
+}
+
+.audio-editor .action-divider {
+    margin: 18px 0 0;
+    opacity: 0.35;
+}
+
+.audio-editor .help-text {
+    opacity: 0.75;
+    font-size: 0.9em;
+}
+
+.audio-editor .editor-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.audio-editor .status-message {
+    margin-top: 12px;
+    white-space: pre-wrap;
+}
+
+.audio-editor .setting-value {
+    min-width: 48px;
+    display: inline-block;
+}
+
+.audio-editor input[type="range"] {
+    width: min(100%, 400px);
+}
+
+@media (max-width: 600px) {
+    .audio-editor .card {
+        padding: 14px;
+    }
+
+    .audio-editor .action-header {
+        align-items: flex-start;
+    }
+}
+</style>
+
+<div class="audio-editor">
+
+    <div class="card">
+        <div class="editor-buttons">
+            <button type="button" class="btn-success save-button" onclick="saveAudioSequence()">
+                Save
+            </button>
+
+            <button type="button" class="btna" onclick="history.back()">
+                Cancel
+            </button>
+
+            <button type="button" class="btn-danger" onclick="deleteAudioSequence()">
+                Delete
+            </button>
+        </div>
+
+        <div id="save-status" class="status-message" role="status"></div>
+    </div>
+
+    <div class="card">
+        <h2>General</h2>
+
+        <div class="field">
+            <label for="sequence-name">Name</label>
+            <input
+                class="text-input btna"
+                type="text"
+                id="sequence-name"
+                value="{{ sequence.name|default('', true) }}"
+                required
+                maxlength="100"
+            >
+        </div>
+
+        <div class="field" style="display: none;">
+            <label for="sequence-description">Description</label>
+            <textarea
+                class="text-input btna"
+                id="sequence-description"
+                rows="3"
+                maxlength="500"
+            >{{ sequence.description|default('', true) }}</textarea>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Beat Detection</h2>
+
+        <p class="help-text">
+            These settings apply when this audio sequence is started.
+        </p>
+
+        <div class="field">
+            <label for="audio-source">Detection Source</label>
+            <select class="btna" id="audio-source">
+                <option value="bass">Bass</option>
+                <option value="combined">Combined</option>
+                <option value="band_1">EQ Band 1</option>
+                <option value="band_2">EQ Band 2</option>
+                <option value="band_3">EQ Band 3</option>
+                <option value="band_4">EQ Band 4</option>
+                <option value="band_5">EQ Band 5</option>
+                <option value="band_6">EQ Band 6</option>
+                <option value="band_7">EQ Band 7</option>
+                <option value="band_8">EQ Band 8</option>
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="audio-sensitivity">
+                Sensitivity:
+                <span class="setting-value" id="sensitivity-value">150%</span>
+            </label>
+
+            <input
+                type="range"
+                id="audio-sensitivity"
+                min="1"
+                max="350"
+                step="1"
+                value="{{ settings.sensitivity|default(150) }}"
+            >
+
+            <p class="help-text">
+                Higher values make beat detection more sensitive.
+            </p>
+        </div>
+
+        <div class="field">
+            <label for="audio-min-interval">
+                Minimum Interval Between Beats (ms)
+            </label>
+
+            <input
+                class="text-input btna"
+                type="number"
+                id="audio-min-interval"
+                min="50"
+                max="2000"
+                step="1"
+                value="{{ settings.min_interval_ms|default(120) }}"
+                required
+            >
+
+            <p class="help-text">
+                Prevents multiple beats from being detected too close together.
+            </p>
+        </div>
+
+        <div class="field">
+            <label for="audio-device">Audio Device</label>
+
+            <select class="btna" id="audio-device">
+                <option value="">Use default / global device</option>
+            </select>
+
+            <p class="help-text">
+                Device selection is optional. If left empty, the server can use
+                the currently configured audio device.
+            </p>
+        </div>
+
+        <div class="field">
+            <label>EQ Weights</label>
+            <div id="eq-controls"></div>
+            <p class="help-text">
+                These weights are saved with this sequence.
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Beat Actions</h2>
+
+        <p class="help-text">
+            Actions are evaluated whenever a beat is detected.
+            Phase 0 runs on every configured beat interval.
+            Phase 1 runs on the next beat in that interval.
+        </p>
+
+        <div class="field">
+            <label for="action-every-beats">Beat Interval</label>
+            <input
+                class="text-input btna"
+                type="number"
+                id="action-every-beats"
+                min="1"
+                max="256"
+                value="{{ sequence.every_beats|default(1) }}"
+            >
+        </div>
+
+        <div id="audio-actions"></div>
+
+        <button
+            type="button"
+            class="btn-primary"
+            onclick="addAudioAction()"
+        >
+            + Add Action
+        </button>
+    </div>
+
+    <div class="card">
+        <h2>Reaction Settings</h2>
+
+        <div class="field">
+            <label>
+                Enable automatic lighting reactions
+                <input type="checkbox" id="reaction-enabled" class="checkbox"
+                    {% if sequence.reaction.enabled|default(true) %}checked{% endif %}>
+                
+            </label>
+        </div>
+
+        <div class="field">
+            <label for="movement-speed">Movement Speed</label>
+            <input
+                type="range"
+                id="movement-speed"
+                min="0"
+                max="1"
+                step="0.05"
+                value="{{ sequence.reaction.movement_speed|default(0.85) }}"
+            >
+            <span id="movement-speed-value"></span>
+        </div>
+
+        <div class="field">
+            <label for="color-change">Color Change</label>
+            <input
+                type="range"
+                id="color-change"
+                min="0"
+                max="1"
+                step="0.05"
+                value="{{ sequence.reaction.color_change|default(0.75) }}"
+            >
+            <span id="color-change-value"></span>
+        </div>
+
+        <div class="field">
+            <label for="reaction-intensity">Intensity</label>
+            <input
+                type="range"
+                id="reaction-intensity"
+                min="0"
+                max="1"
+                step="0.05"
+                value="{{ sequence.reaction.intensity|default(0.9) }}"
+            >
+            <span id="reaction-intensity-value"></span>
+        </div>
+
+        <div class="field">
+            <label>
+                Enable strobe reactions
+                <input type="checkbox" id="strobe-enabled" class="checkbox"
+                    {% if sequence.reaction.strobe_enabled|default(false) %}checked{% endif %}>
+            </label>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="editor-buttons">
+            <button type="button" class="btn-success save-button" onclick="saveAudioSequence()">
+                Save
+            </button>
+
+            <button type="button" class="btna" onclick="history.back()">
+                Cancel
+            </button>
+
+            <button type="button" class="btn-danger" onclick="deleteAudioSequence()">
+                Delete
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const INITIAL_SEQUENCE = {{ sequence|tojson }};
+const INITIAL_SETTINGS = {{ settings|tojson }};
+const IS_NEW_SEQUENCE = {{ is_new|tojson }};
+const SCENES = {{ scenes|tojson }};
+const FADES = {{ fades|tojson }};
+const STROBES = {{ strobes|tojson }};
+const INITIAL_SEQUENCE_ID =
+    INITIAL_SEQUENCE.id ?? INITIAL_SEQUENCE.sequence_id ?? null;
+
+
+const EQ_DEFAULTS = [180, 300, 200, 80, 50, 40, 25, 15];
+
+const EQ_BANDS = [
+    "31–63 Hz",
+    "63–125 Hz",
+    "125–250 Hz",
+    "250–500 Hz",
+    "500 Hz–1 kHz",
+    "1–2 kHz",
+    "2–4 kHz",
+    "4–8 kHz"
+];
+
+let nextActionId = 1;
+let eqWeights = [...(INITIAL_SETTINGS.eq_weights || EQ_DEFAULTS)];
+let isSavingAudioSequence = false;
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[char]);
+}
+
+function getName(item) {
+    return typeof item === "string" ? item : (item?.name ?? "");
+}
+
+
+
+function getActionTargetOptions(type) {
+    if (type === "scene") return SCENES;
+    if (type === "fade") return FADES;
+    if (type === "strobe") return STROBES;
+
+    return [];
+}
+
+
+
+
+function createSuggestionButtons(type, target) {
+    const items = getActionTargetOptions(type);
+
+    if (!items.length) {
+        return '<p class="help-text">No suggestions available.</p>';
+    }
+
+    return items.map(item => {
+        const name = getName(item);
+        const value = type === "strobe"
+            ? String(item.id ?? "")
+            : name;
+
+        if (!value) return "";
+
+        return `
+            <button
+                type="button"
+                class="btna"
+                data-target="${escapeHTML(value)}"
+                onclick="setAudioActionTarget(this)"
+            >${escapeHTML(name || `Strobe ${value}`)}</button>
+        `;
+    }).join("");
+}
+
+
+function addAudioAction(action = {}) {
+    const container = document.getElementById("audio-actions");
+    const id = action.id ?? nextActionId++;
+
+    nextActionId = Math.max(nextActionId, Number(id) + 1);
+
+    
+    const type = ["scene", "fade", "strobe"].includes(action.type)
+        ? action.type
+        : "scene";
+
+    const phase = Number(action.phase ?? 0);
+    const target = action.target ?? "";
+    const enabled = action.enabled !== false;
+
+    const card = document.createElement("div");
+    card.className = "action-card audio-action";
+    card.dataset.actionId = id;
+
+    card.innerHTML = `
+        <div class="action-header">
+            <strong>Action ${id}</strong>
+            <button
+                type="button"
+                class="btn-danger"
+                onclick="this.closest('.audio-action').remove()"
+            >Remove</button>
+        </div>
+
+        <div class="field">
+            <label>
+                Enabled
+                <input type="checkbox" class="action-enabled checkbox" ${enabled ? "checked" : ""}>
+            </label>
+        </div>
+
+        <div class="field">
+            <label>Action Type</label>
+            <select class="btna action-type" onchange="updateAudioAction(this)">
+                <option value="scene" ${type === "scene" ? "selected" : ""}>Scene</option>
+                <option value="fade" ${type === "fade" ? "selected" : ""}>Fade</option>
+                <option value="strobe" ${type === "strobe" ? "selected" : ""}>Strobe</option>
+            </select>
+        </div>
+
+        <div class="field target-box">
+            <label>Target</label>
+            <input
+                type="text"
+                class="text-input btna action-target"
+                value="${escapeHTML(target)}"
+                placeholder="Select or enter a target"
+                autocomplete="off"
+            >
+            <div class="suggestions">${createSuggestionButtons(type, target)}</div>
+        </div>
+
+        <div class="field">
+            <label>Beat Phase</label>
+            <input
+                type="number"
+                class="text-input btna action-phase"
+                min="0"
+                max="255"
+                step="1"
+                value="${phase}"
+            >
+            <p class="help-text">
+                Phase must be lower than the Beat Interval above.
+            </p>
+        </div>
+
+        <hr class="action-divider">
+    `;
+
+    container.appendChild(card);
+}
+
+function setAudioActionTarget(button) {
+    const card = button.closest(".audio-action");
+    const input = card.querySelector(".action-target");
+    input.value = button.dataset.target || button.textContent.trim();
+}
+
+function updateAudioAction(select) {
+    const card = select.closest(".audio-action");
+    const targetInput = card.querySelector(".action-target");
+    const suggestions = card.querySelector(".suggestions");
+
+    targetInput.value = "";
+    suggestions.innerHTML = createSuggestionButtons(select.value, "");
+}
+
+function renderEQControls() {
+    const container = document.getElementById("eq-controls");
+    container.innerHTML = "";
+
+    EQ_BANDS.forEach((band, index) => {
+        const row = document.createElement("div");
+        row.className = "field";
+
+        row.innerHTML = `
+            <label for="eq-weight-${index}">
+                ${band}:
+                <span class="setting-value" id="eq-value-${index}">${eqWeights[index] ?? EQ_DEFAULTS[index]}</span>
+            </label>
+            <input
+                type="range"
+                id="eq-weight-${index}"
+                min="0"
+                max="1000"
+                step="5"
+                value="${eqWeights[index] ?? EQ_DEFAULTS[index]}"
+                oninput="updateEQWeight(${index}, this.value)"
+            >
+        `;
+
+        container.appendChild(row);
+    });
+}
+
+function updateEQWeight(index, value) {
+    eqWeights[index] = Number(value);
+    document.getElementById(`eq-value-${index}`).textContent = value;
+}
+
+function updateRangeLabels() {
+    document.getElementById("sensitivity-value").textContent =
+        `${document.getElementById("audio-sensitivity").value}%`;
+
+    [
+        ["movement-speed", "movement-speed-value"],
+        ["color-change", "color-change-value"],
+        ["reaction-intensity", "reaction-intensity-value"]
+    ].forEach(([inputId, outputId]) => {
+        document.getElementById(outputId).textContent =
+            Number(document.getElementById(inputId).value).toFixed(2);
+    });
+}
+
+async function loadAudioDevices() {
+    const select = document.getElementById("audio-device");
+
+    try {
+        const response = await fetch("/api/audio/devices");
+        const data = await response.json();
+
+        if (!response.ok) throw new Error(data.error || "Could not load audio devices.");
+
+        const devices = data.devices || [];
+        const selectedDevice = INITIAL_SETTINGS.device_index;
+
+        //select.innerHTML = '<option value="">Use default / global device</option>';
+        select.innerHTML = '<option value="">select</option>';
+
+        devices.forEach(device => {
+            const index = device.index ?? device.device_index;
+            if (index === undefined || index === null) return;
+
+            const option = document.createElement("option");
+            option.value = index;
+            option.textContent = device.name || `Audio Device ${index}`;
+            option.selected = selectedDevice !== null &&
+                selectedDevice !== undefined &&
+                Number(selectedDevice) === Number(index);
+
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.warn("Audio device list unavailable:", error);
+    }
+}
+
+function readAudioActions() {
+    const interval = Number(document.getElementById("action-every-beats").value);
+
+    if (!Number.isInteger(interval) || interval < 1 || interval > 256) {
+        throw new Error("Beat Interval must be between 1 and 256.");
+    }
+
+    return [...document.querySelectorAll(".audio-action")].map(card => {
+        const type = card.querySelector(".action-type").value;
+        const target = card.querySelector(".action-target").value.trim();
+        const phase = Number(card.querySelector(".action-phase").value);
+
+        if (!target) {
+            throw new Error("Every action needs a target.");
+        }
+
+        if (!Number.isInteger(phase) || phase < 0 || phase >= interval) {
+            throw new Error(`Action phase must be between 0 and ${interval - 1}.`);
+        }
+
+        return {
+            id: Number(card.dataset.actionId),
+            enabled: card.querySelector(".action-enabled").checked,
+            type,
+            target,
+            phase
+        };
+    });
+}
+
+function buildSequencePayload() {
+    const name = document.getElementById("sequence-name").value.trim();
+
+    if (!name) throw new Error("Please enter a sequence name.");
+
+    const sensitivity = Number(document.getElementById("audio-sensitivity").value);
+    const minInterval = Number(document.getElementById("audio-min-interval").value);
+
+    if (!Number.isInteger(sensitivity) || sensitivity < 1 || sensitivity > 350) {
+        throw new Error("Sensitivity must be between 1 and 350.");
+    }
+
+    if (!Number.isInteger(minInterval) || minInterval < 50 || minInterval > 2000) {
+        throw new Error("Minimum interval must be between 50 and 2000 ms.");
+    }
+
+    const actions = readAudioActions();
+
+    return {
+        ...INITIAL_SEQUENCE,
+        name,
+        description: document.getElementById("sequence-description").value.trim(),
+        use_global_settings: false,
+        overrides: {
+            ...(INITIAL_SEQUENCE.overrides || {}),
+            source: document.getElementById("audio-source").value,
+            sensitivity,
+            min_interval_ms: minInterval,
+            device_index: document.getElementById("audio-device").value === ""
+                ? null
+                : Number(document.getElementById("audio-device").value),
+            eq_weights: [...eqWeights]
+        },
+        every_beats: Number(document.getElementById("action-every-beats").value),
+        actions,
+        reaction: {
+            enabled: document.getElementById("reaction-enabled").checked,
+            movement_speed: Number(document.getElementById("movement-speed").value),
+            color_change: Number(document.getElementById("color-change").value),
+            intensity: Number(document.getElementById("reaction-intensity").value),
+            strobe_enabled: document.getElementById("strobe-enabled").checked
+        }
+    };
+}
+
+
+
+async function saveAudioSequence() {
+    const status = document.getElementById("save-status");
+    status.textContent = "";
+
+    if (isSavingAudioSequence) {
+        return;
+    }
+
+    isSavingAudioSequence = true;
+
+    try {
+        const payload = buildSequencePayload();
+
+        const url = IS_NEW_SEQUENCE
+            ? "/api/audio-sequences"
+            : `/api/audio-sequences/${encodeURIComponent(INITIAL_SEQUENCE_ID)}`;
+
+        const method = IS_NEW_SEQUENCE ? "POST" : "PUT";
+
+        const response = await fetch(url, {
+            method,
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.success === false) {
+            throw new Error(data.error || "Could not save audio sequence.");
+        }
+
+        if (IS_NEW_SEQUENCE) {
+            const savedSequence = data.sequence;
+            const savedId = data.sequence_id
+                ?? savedSequence?.id
+                ?? savedSequence?.sequence_id;
+
+            if (!savedId) {
+                throw new Error(
+                    "The sequence was saved, but the server did not return its ID."
+                );
+            }
+
+            // important!!! --> change URL to "edit", so it isn't trying to create a new seq. instead of editing it.
+            window.location.replace(
+                `/audio-sequences/edit?id=${encodeURIComponent(savedId)}`
+            );
+
+            //return to /audio for convinience:
+            window.location.href="/audio";
+            
+            return;
+        }
+
+        status.textContent = "Audio sequence saved successfully.";
+        window.location.href = "/audio";
+
+    } catch (error) {
+        status.textContent =
+            error.message || "Could not save audio sequence.";
+    } finally {
+        isSavingAudioSequence = false;
+    }
+}
+
+
+
+
+async function deleteAudioSequence() {
+    const sequenceId = INITIAL_SEQUENCE_ID;
+    const name = INITIAL_SEQUENCE.name;
+
+    if (!sequenceId) {
+        alert("This sequence has not been saved yet.");
+        return;
+    }
+
+    if (!confirm(`Delete audio sequence "${name}"?`)) return;
+
+    try {
+        const response = await fetch(
+            `/api/audio-sequences/${encodeURIComponent(sequenceId)}`,
+            { method: "DELETE" }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || "Could not delete audio sequence.");
+        }
+
+        window.location.href = "/audio";
+
+    } catch (error) {
+        document.getElementById("save-status").textContent =
+            error.message || "Could not delete audio sequence.";
+    }
+}
+
+
+function initialiseEditor() {
+    document.getElementById("audio-source").value =
+        INITIAL_SETTINGS.source || "bass";
+
+    document.getElementById("audio-sensitivity").value =
+        INITIAL_SETTINGS.sensitivity ?? 150;
+
+    document.getElementById("audio-min-interval").value =
+        INITIAL_SETTINGS.min_interval_ms ?? 120;
+
+    renderEQControls();
+
+    (INITIAL_SEQUENCE.actions || []).forEach(addAudioAction);
+
+    updateRangeLabels();
+
+    loadAudioDevices().catch(console.error);
+}
+
+document.getElementById("audio-sensitivity")
+    .addEventListener("input", updateRangeLabels);
+
+[
+    "movement-speed",
+    "color-change",
+    "reaction-intensity"
+].forEach(id => {
+    document.getElementById(id).addEventListener("input", updateRangeLabels);
+});
+
+document.addEventListener("DOMContentLoaded", initialiseEditor);
+</script>
+
+{% endblock %}

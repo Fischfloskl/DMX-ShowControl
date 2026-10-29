@@ -1,5 +1,21 @@
 {
     "type": "strobes",
     "version": 1,
-    "data": []
+    "data": [
+        {
+            "id": 1,
+            "name": "1243245",
+            "cycles": 10,
+            "time": 10000,
+            "mode": "timed",
+            "time_a": 100,
+            "time_b": 100,
+            "states": [
+                {
+                    "type": "scene",
+                    "target": 1
+                }
+            ]
+        }
+    ]
 }

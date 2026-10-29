@@ -105,64 +105,66 @@ value="{{ device.color }}">
 
 
 
+
 <div class="card">
+    <h3>Channel Configuration</h3>
 
+    <p style="color:#999;">
+        Configure the function of each DMX channel. The DMX address
+        is calculated automatically from the start address.
+    </p>
 
-<h3>
-Channelname
-</h3>
+    <div class="form-grid">
+        {% for c in range(device.channels) %}
+        {% set channel_index = c + 1 %}
+        {% set current_function = device.channel_functions[c] if device.channel_functions is defined and c < device.channel_functions|length else 'Fader' %}
 
+        <div class="card">
+            <label style="font-weight: bold;">CH {{ device.start_channel + c }}</label>
+            <br>
+            <label for="channel_{{ channel_index }}">
+                Name
+            </label>
 
-<p style="color:#999;">
+            <input
+                class="btna"
+                id="channel_{{ channel_index }}"
+                name="channel_{{ channel_index }}"
+                value="{{ device.channel_names[c] if c < device.channel_names|length else 'CH' ~ channel_index }}"
+            >
 
-These names will be displayed later in the Scene Editor.
-The DMX address is automatically calculated based on the start address.
+            <label for="function_{{ channel_index }}">
+                Function
+            </label>
 
-</p>
+            <select
+                class="btna"
+                id="function_{{ channel_index }}"
+                name="function_{{ channel_index }}"
+                style="width:100%;"
+            >
+                <option value="Fader" {% if current_function == 'Fader' %}selected{% endif %}>Fader</option>
+                <option value="Disabled" {% if current_function == 'Disabled' %}selected{% endif %}>Disabled</option>
+                <option value="R1" {% if current_function == 'R1' %}selected{% endif %}>R1 – Red, Zone 1</option>
+                <option value="G1" {% if current_function == 'G1' %}selected{% endif %}>G1 – Green, Zone 1</option>
+                <option value="B1" {% if current_function == 'B1' %}selected{% endif %}>B1 – Blue, Zone 1</option>
+                <option value="W1" {% if current_function == 'W1' %}selected{% endif %}>W1 – White, Zone 1</option>
 
+                <option value="R2" {% if current_function == 'R2' %}selected{% endif %}>R2 – Red, Zone 2</option>
+                <option value="G2" {% if current_function == 'G2' %}selected{% endif %}>G2 – Green, Zone 2</option>
+                <option value="B2" {% if current_function == 'B2' %}selected{% endif %}>B2 – Blue, Zone 2</option>
+                <option value="W2" {% if current_function == 'W2' %}selected{% endif %}>W2 – White, Zone 2</option>
 
-
-<div class="form-grid">
-
-
-{% for c in range(device.channels) %}
-
-
-<div>
-
-
-<label>
-DMX {{ device.start_channel + c }}
-</label>
-<br>
-<label class="checkbox-row">
-    <p style="color:#999;font-size: small;display: none;">Dimmer/Movement Channel</p>
-    <input
-        id="dimmer-channel"
-        type="checkbox"
-        class="checkbox"style="display: none;"
-    >
-    
-</label>
-<br style="display: none;">
-
-<input
-class="btna"
-name="channel_{{ c+1 }}"
-value="{{ device.channel_names[c] if c < device.channel_names|length else 'CH' ~ (c+1) }}">
-
-<br>
-<br>
+                <option value="R3" {% if current_function == 'R3' %}selected{% endif %}>R3 – Red, Zone 3</option>
+                <option value="G3" {% if current_function == 'G3' %}selected{% endif %}>G3 – Green, Zone 3</option>
+                <option value="B3" {% if current_function == 'B3' %}selected{% endif %}>B3 – Blue, Zone 3</option>
+                <option value="W3" {% if current_function == 'W3' %}selected{% endif %}>W3 – White, Zone 3</option>
+            </select>
+        </div>
+        {% endfor %}
+    </div>
 </div>
 
-
-{% endfor %}
-
-
-</div>
-
-
-</div>
 
 
 
@@ -175,7 +177,7 @@ value="{{ device.channel_names[c] if c < device.channel_names|length else 'CH' ~
 
 
 <button
-class="btn-success"
+class="btn-success save-button"
 type="submit">
 
 Save

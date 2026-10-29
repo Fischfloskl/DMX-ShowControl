@@ -558,8 +558,8 @@ DMX-ShowControl
 
         <div class="menu-group">
             <button class="menu-trigger" type="button"
-                    aria-haspopup="true" aria-expanded="false">
-                File
+                    aria-haspopup="true" aria-expanded="false" onclick="window.location.href='/'">
+                Home
             </button>
             <div class="dropdown">
                 <a href="/">Dashboard</a>
@@ -577,8 +577,8 @@ DMX-ShowControl
                 <a href="/set-mode/show">Show Mode</a>
                 <a href="/set-mode/edit">Edit Mode</a>
                 <div class="menu-separator"></div>
-                <button type="button" class="dropdown-action danger" style="color: rgb(255, 74, 74);
-                        onclick="clearDMX()">
+                <button type="button" class="dropdown-action danger" style="color: rgb(255, 74, 74);"
+                        onclick="window.location.href='/dmx/clear'">
                     Clear DMX
                 </button>
             </div>
@@ -664,8 +664,8 @@ DMX-ShowControl
     <a href="/visualizer">3D Visualizer</a>
     <a href="/timing">Timing</a>
     <a href="/settings">Settings</a>
-    <button type="button" class="dropdown-action danger" style="color: rgb(255, 74, 74);
-            onclick="clearDMX()">Clear DMX</button>
+    <button type="button" class="dropdown-action danger" style="color: rgb(255, 74, 74);"
+            onclick="window.location.href='/dmx/clear'">Clear DMX</button>
 </div>
 
 
@@ -683,6 +683,11 @@ DMX-ShowControl
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
 <script>
+async function clearDMX(){
+
+    //await fetch("/dmx/clear");
+    window.location.href="/dmx/clear"
+}
 
 const socket = io();
 

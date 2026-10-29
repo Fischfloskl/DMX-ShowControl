@@ -1,19 +1,20 @@
 
 import json
 import re
+import uuid
 from pathlib import Path
 from copy import deepcopy
 
 
 class AudioSequenceManager:
     """
-    Verwaltet Audio-Sequences (.dmxaudio) und globale Audio-Einstellungen.
+    Manages audio sequences (.json) and global audio settings.
 
-    Globale Einstellungen gelten standardmässig für alle Sequences.
-    Einzelne Sequences können diese Einstellungen überschreiben.
+    Each sequence has a stable ID independent of its editable name.
+    Existing name-based sequence files are migrated automatically.
     """
 
-    SEQUENCE_EXTENSION = ".dmxaudio"
+    SEQUENCE_EXTENSION = ".json"
 
     DEFAULT_GLOBAL_SETTINGS = {
         "device_index": None,
@@ -31,6 +32,8 @@ class AudioSequenceManager:
         "strobe_enabled": False,
     }
 
+    ID_PATTERN = re.compile(r"^[a-f0-9]{32}$")
+
     def __init__(
         self,
         sequence_directory="data/audio_sequences",
@@ -39,23 +42,20 @@ class AudioSequenceManager:
         self.sequence_directory = Path(sequence_directory)
         self.settings_file = Path(settings_file)
 
-        self.sequence_directory.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-        self.settings_file.parent.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        self.global_settings = self._load_global_settings()
+        self.sequence_directory.mkdir(parents=True, exist_ok=True)
+        self.settings_file.parent.mkdir(parents=True, exist_ok=True)
 
         self.active_sequence = None
         self.running = False
         self.error = None
 
+        self.global_settings = self._load_global_settings()
+
+        # Upgrade existing name-based files.
+        self._migrate_legacy_sequences()
+
     # --------------------------------------------------------
-    # Globale Einstellungen
+    # Global settings
     # --------------------------------------------------------
 
     def _load_global_settings(self):
@@ -73,10 +73,11 @@ class AudioSequenceManager:
             if isinstance(saved, dict):
                 settings.update(saved)
 
+            self._validate_settings(settings)
             return settings
 
-        except (OSError, json.JSONDecodeError) as exc:
-            self.error = f"Globale Audio-Einstellungen konnten nicht geladen werden: {exc}"
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            self.error = f"Could not load global audio settings: {exc}"
             return deepcopy(self.DEFAULT_GLOBAL_SETTINGS)
 
     def get_global_settings(self):
@@ -84,7 +85,7 @@ class AudioSequenceManager:
 
     def save_global_settings(self, settings):
         if not isinstance(settings, dict):
-            raise ValueError("Die Einstellungen müssen ein Dictionary sein.")
+            raise ValueError("Settings must be a dictionary.")
 
         updated = deepcopy(self.DEFAULT_GLOBAL_SETTINGS)
         updated.update(settings)
@@ -96,125 +97,335 @@ class AudioSequenceManager:
         return self.get_global_settings()
 
     # --------------------------------------------------------
-    # Audio-Sequence-Dateien
+    # IDs, names and paths
     # --------------------------------------------------------
 
     @staticmethod
+    def _new_id():
+        return uuid.uuid4().hex
+
+    @classmethod
+    def _validate_id(cls, sequence_id):
+        sequence_id = str(sequence_id).strip().lower()
+
+        if not cls.ID_PATTERN.fullmatch(sequence_id):
+            raise ValueError("Invalid audio sequence ID.")
+
+        return sequence_id
+
+    @staticmethod
     def _safe_name(name):
-        name = str(name).strip()
+        if not isinstance(name, str):
+            raise ValueError("A sequence name is required.")
+
+        name = name.strip()
 
         if not name or name in {".", ".."}:
-            raise ValueError("Bitte einen gültigen Sequence-Namen eingeben.")
+            raise ValueError("Please enter a valid sequence name.")
 
         if not re.fullmatch(r"[\w äöüÄÖÜß.-]+", name, flags=re.UNICODE):
             raise ValueError(
-                "Der Name darf nur Buchstaben, Zahlen, Leerzeichen, "
-                "Bindestriche, Punkte und Unterstriche enthalten."
+                "The name may only contain letters, numbers, spaces, "
+                "hyphens, periods and underscores."
             )
 
         return name
 
-    def _sequence_path(self, name):
-        safe_name = self._safe_name(name)
-        path = (self.sequence_directory / f"{safe_name}{self.SEQUENCE_EXTENSION}").resolve()
+    def _sequence_path(self, sequence_id):
+        sequence_id = self._validate_id(sequence_id)
+        path = (
+            self.sequence_directory / f"{sequence_id}{self.SEQUENCE_EXTENSION}"
+        ).resolve()
 
         if path.parent != self.sequence_directory.resolve():
-            raise ValueError("Ungültiger Dateipfad.")
+            raise ValueError("Invalid sequence file path.")
 
         return path
 
-    def list_sequences(self):
-        sequences = []
+    def _find_sequence_path(self, identifier):
+        """
+        Find a sequence by ID.
 
-        for path in sorted(self.sequence_directory.glob(f"*{self.SEQUENCE_EXTENSION}")):
+        Name lookup is retained temporarily for compatibility with older
+        callers while app.py and trigger references are being migrated.
+        """
+        identifier = str(identifier).strip()
+
+        if self.ID_PATTERN.fullmatch(identifier.lower()):
+            path = self._sequence_path(identifier.lower())
+            if path.is_file():
+                return path
+
+        # Transitional compatibility: resolve an old sequence name.
+        for path in self.sequence_directory.glob(
+            f"*{self.SEQUENCE_EXTENSION}"
+        ):
             try:
                 with path.open("r", encoding="utf-8") as file:
                     data = json.load(file)
 
+                if isinstance(data, dict):
+                    if data.get("name") == identifier:
+                        return path
+
+            except (OSError, json.JSONDecodeError):
+                continue
+
+        return None
+
+    def _ensure_unique_name(self, name, exclude_id=None):
+        normalized = name.casefold()
+
+        for sequence in self.list_sequences():
+            if sequence["id"] == exclude_id:
+                continue
+
+            if sequence["name"].casefold() == normalized:
+                raise ValueError(
+                    f"An audio sequence named '{name}' already exists."
+                )
+
+    # --------------------------------------------------------
+    # Migration of existing sequence files
+    # --------------------------------------------------------
+
+    def _migrate_legacy_sequences(self):
+        """
+        Give every existing sequence a stable ID and store it under
+        <id>.json instead of <old name>.json.
+
+        Existing IDs are preserved. Sequence content is retained during
+        migration, including fields that may be handled elsewhere.
+        """
+        files = list(
+            self.sequence_directory.glob(f"*{self.SEQUENCE_EXTENSION}")
+        )
+
+        for old_path in files:
+            try:
+                with old_path.open("r", encoding="utf-8") as file:
+                    data = json.load(file)
+
+                if not isinstance(data, dict):
+                    self.error = (
+                        f"Cannot migrate invalid sequence file: {old_path.name}"
+                    )
+                    continue
+
+                sequence_id = data.get("id")
+
+                if not isinstance(sequence_id, str) or not self.ID_PATTERN.fullmatch(
+                    sequence_id.lower()
+                ):
+                    sequence_id = self._new_id()
+                else:
+                    sequence_id = sequence_id.lower()
+
+                data["id"] = sequence_id
+                data.setdefault("version", 1)
+                data.setdefault("name", old_path.stem)
+                data.setdefault("use_global_settings", True)
+                data.setdefault("overrides", {})
+                data.setdefault(
+                    "reaction",
+                    deepcopy(self.DEFAULT_REACTION_SETTINGS),
+                )
+                data.setdefault("every_beats", 1)
+                data.setdefault("actions", [])
+
+                new_path = self._sequence_path(sequence_id)
+
+                if old_path.resolve() == new_path.resolve():
+                    # File already uses the ID as its filename.
+                    self._write_json(new_path, data)
+                    continue
+
+                if new_path.exists():
+                    with new_path.open("r", encoding="utf-8") as file:
+                        existing = json.load(file)
+
+                    if existing.get("id") != sequence_id:
+                        raise ValueError(
+                            f"Sequence ID collision: {sequence_id}"
+                        )
+
+                    # Another file already contains this same sequence ID.
+                    old_path.unlink()
+                    continue
+
+                # Write the new file first, then remove the old one.
+                self._write_json(new_path, data)
+                old_path.unlink()
+
+            except (OSError, json.JSONDecodeError, ValueError) as exc:
+                self.error = (
+                    f"Could not migrate {old_path.name}: {exc}"
+                )
+
+    # --------------------------------------------------------
+    # List, create, load, save, duplicate and delete
+    # --------------------------------------------------------
+
+    def list_sequences(self):
+        sequences = []
+
+        for path in sorted(
+            self.sequence_directory.glob(f"*{self.SEQUENCE_EXTENSION}")
+        ):
+            try:
+                with path.open("r", encoding="utf-8") as file:
+                    data = json.load(file)
+
+                if not isinstance(data, dict):
+                    raise ValueError("Invalid sequence data.")
+
+                sequence_id = data.get("id", path.stem)
+
                 sequences.append({
+                    "id": sequence_id,
                     "name": data.get("name", path.stem),
-                    "description": data.get("description", ""),
                     "file": path.name,
                 })
 
-            except (OSError, json.JSONDecodeError):
+            except (OSError, json.JSONDecodeError, ValueError):
                 sequences.append({
+                    "id": path.stem,
                     "name": path.stem,
-                    "description": "Fehlerhafte Sequence-Datei",
                     "file": path.name,
                     "error": True,
                 })
 
         return sequences
 
-    def create_sequence(self, name, description=""):
+    def create_sequence(self, name, data=None):
         name = self._safe_name(name)
-        path = self._sequence_path(name)
+        self._ensure_unique_name(name)
 
-        if path.exists():
-            raise ValueError(f"Die Audio-Sequence '{name}' existiert bereits.")
+        sequence_id = self._new_id()
 
-        sequence = {
-            "version": 1,
+        sequence_data = deepcopy(data) if isinstance(data, dict) else {}
+
+        sequence_data.update({
+            "id": sequence_id,
+            "version": 2,
             "name": name,
-            "description": str(description).strip(),
-            "use_global_settings": True,
-            "overrides": {},
-            "reaction": deepcopy(self.DEFAULT_REACTION_SETTINGS),
-        }
+            "use_global_settings": sequence_data.get(
+                "use_global_settings", True
+            ),
+            "overrides": sequence_data.get("overrides", {}),
+            "reaction": sequence_data.get(
+                "reaction",
+                deepcopy(self.DEFAULT_REACTION_SETTINGS),
+            ),
+            "every_beats": sequence_data.get("every_beats", 1),
+            "actions": sequence_data.get("actions", []),
+        })
 
-        self.save_sequence(name, sequence)
-        return sequence
+        return self.save_sequence(sequence_id, sequence_data)
 
-    def load_sequence(self, name):
-        path = self._sequence_path(name)
+    def load_sequence(self, identifier):
+        path = self._find_sequence_path(identifier)
 
-        if not path.exists():
-            raise FileNotFoundError(f"Audio-Sequence '{name}' wurde nicht gefunden.")
+        if path is None:
+            raise FileNotFoundError(
+                f"Audio sequence '{identifier}' was not found."
+            )
 
         with path.open("r", encoding="utf-8") as file:
             sequence = json.load(file)
 
         if not isinstance(sequence, dict):
-            raise ValueError("Die Audio-Sequence enthält ungültige Daten.")
+            raise ValueError("The audio sequence contains invalid data.")
 
+        sequence.setdefault("id", path.stem)
         sequence.setdefault("version", 1)
         sequence.setdefault("name", path.stem)
-        sequence.setdefault("description", "")
         sequence.setdefault("use_global_settings", True)
         sequence.setdefault("overrides", {})
         sequence.setdefault(
             "reaction",
             deepcopy(self.DEFAULT_REACTION_SETTINGS),
         )
+        sequence.setdefault("every_beats", 1)
+        sequence.setdefault("actions", [])
 
         return sequence
 
-    def save_sequence(self, name, data):
-        name = self._safe_name(name)
+    def save_sequence(self, sequence_id, data):
+        """
+        Save a sequence by stable ID.
 
+        For a new sequence, supply a new ID and a name in data.
+        The name may change without changing the ID.
+        """
         if not isinstance(data, dict):
-            raise ValueError("Sequenzdaten müssen ein Dictionary sein.")
+            raise ValueError("Sequence data must be a dictionary.")
 
-        existing = self.load_sequence(name)
+        sequence_id = str(sequence_id).strip()
+        existing_path = self._find_sequence_path(sequence_id)
+
+        if existing_path is not None:
+            existing = self.load_sequence(sequence_id)
+            sequence_id = existing["id"]
+        else:
+            # New sequences must use a valid ID.
+            sequence_id = self._validate_id(sequence_id)
+            existing = {
+                "version": 2,
+                "id": sequence_id,
+                "name": "",
+                "use_global_settings": True,
+                "overrides": {},
+                "reaction": deepcopy(self.DEFAULT_REACTION_SETTINGS),
+                "every_beats": 1,
+                "actions": [],
+            }
+
+        name = self._safe_name(data.get("name", existing.get("name", "")))
+        self._ensure_unique_name(name, exclude_id=sequence_id)
 
         overrides = data.get("overrides", existing.get("overrides", {}))
         reaction = data.get("reaction", existing.get("reaction", {}))
+        actions = data.get("actions", existing.get("actions", []))
+        every_beats = data.get(
+            "every_beats",
+            existing.get("every_beats", 1),
+        )
 
         if not isinstance(overrides, dict):
-            raise ValueError("overrides muss ein Dictionary sein.")
+            raise ValueError("overrides must be a dictionary.")
 
         if not isinstance(reaction, dict):
-            raise ValueError("reaction muss ein Dictionary sein.")
+            raise ValueError("reaction must be a dictionary.")
 
-        # Globale Einstellungen als Grundlage verwenden.
-        effective_settings = self.get_global_settings()
+        if not isinstance(actions, list):
+            raise ValueError("actions must be a list.")
+
+        try:
+            every_beats = int(every_beats)
+        except (TypeError, ValueError):
+            raise ValueError("every_beats must be an integer.")
+
+        if every_beats < 1:
+            raise ValueError("every_beats must be at least 1.")
+
+        use_global_settings = data.get(
+            "use_global_settings",
+            existing.get("use_global_settings", True),
+        )
+
+        if not isinstance(use_global_settings, bool):
+            raise ValueError("use_global_settings must be a boolean.")
+
+        # Validate explicit overrides against the default/global settings.
+        effective_settings = (
+            self.get_global_settings()
+            if use_global_settings
+            else deepcopy(self.DEFAULT_GLOBAL_SETTINGS)
+        )
         effective_settings.update(overrides)
-
-        # Die vollständigen Einstellungen validieren.
         validated_settings = self._validate_settings(effective_settings)
 
-        # Nur die tatsächlich überschriebenen Werte speichern.
         validated_overrides = {
             key: validated_settings[key]
             for key in overrides
@@ -222,33 +433,75 @@ class AudioSequenceManager:
         }
 
         sequence = {
+            "id": sequence_id,
+            "version": 2,
             "name": name,
+            "use_global_settings": use_global_settings,
             "overrides": validated_overrides,
             "reaction": reaction,
+            "every_beats": every_beats,
+            "actions": actions,
         }
 
-        self._write_json(self._sequence_path(name), sequence)
-        return sequence
+        self._write_json(self._sequence_path(sequence_id), sequence)
 
-    def delete_sequence(self, name):
-        path = self._sequence_path(name)
+        # Remove an old name-based file if this save migrated it.
+        if existing_path is not None:
+            target_path = self._sequence_path(sequence_id)
+            if existing_path.resolve() != target_path.resolve():
+                existing_path.unlink(missing_ok=True)
+
+        return deepcopy(sequence)
+
+    def duplicate_sequence(self, sequence_id, new_name=None):
+        original = self.load_sequence(sequence_id)
+
+        if new_name is None:
+            base_name = f"{original['name']} Copy"
+            new_name = base_name
+            counter = 2
+
+            existing_names = {
+                item["name"].casefold()
+                for item in self.list_sequences()
+            }
+
+            while new_name.casefold() in existing_names:
+                new_name = f"{base_name} {counter}"
+                counter += 1
+
+        new_name = self._safe_name(new_name)
+        self._ensure_unique_name(new_name)
+
+        duplicate = deepcopy(original)
+        duplicate.pop("id", None)
+        duplicate["name"] = new_name
+        duplicate["version"] = 2
+
+        return self.create_sequence(new_name, duplicate)
+
+    def delete_sequence(self, sequence_id):
+        sequence = self.load_sequence(sequence_id)
+        stable_id = sequence["id"]
+
+        if self.active_sequence == stable_id and self.running:
+            raise ValueError("An active audio sequence cannot be deleted.")
+
+        path = self._sequence_path(stable_id)
 
         if not path.exists():
-            raise FileNotFoundError(f"Audio-Sequence '{name}' wurde nicht gefunden.")
-
-        if self.active_sequence == name and self.running:
-            raise ValueError("Eine aktive Audio-Sequence kann nicht gelöscht werden.")
+            raise FileNotFoundError("Audio sequence was not found.")
 
         path.unlink()
         return True
 
     # --------------------------------------------------------
-    # Effektive Einstellungen
+    # Effective settings
     # --------------------------------------------------------
 
     def get_effective_settings(self, sequence):
         if not isinstance(sequence, dict):
-            raise ValueError("Ungültige Audio-Sequence.")
+            raise ValueError("Invalid audio sequence.")
 
         if sequence.get("use_global_settings", True):
             settings = self.get_global_settings()
@@ -256,8 +509,9 @@ class AudioSequenceManager:
             settings = deepcopy(self.DEFAULT_GLOBAL_SETTINGS)
 
         overrides = sequence.get("overrides", {})
+
         if not isinstance(overrides, dict):
-            raise ValueError("'overrides' muss ein Dictionary sein.")
+            raise ValueError("'overrides' must be a dictionary.")
 
         settings.update(overrides)
         self._validate_settings(settings)
@@ -279,42 +533,67 @@ class AudioSequenceManager:
         }
 
         if settings.get("source") not in allowed_sources:
-            raise ValueError("Ungültige Audioquelle für die Beat-Erkennung.")
+            raise ValueError("Invalid audio source for beat detection.")
 
         sensitivity = settings.get("sensitivity", 150)
-        if not isinstance(sensitivity, (int, float)) or not 1 <= sensitivity <= 350:
-            raise ValueError("Die Empfindlichkeit muss zwischen 1 und 350 liegen.")
+        if (
+            isinstance(sensitivity, bool)
+            or not isinstance(sensitivity, (int, float))
+            or not 1 <= sensitivity <= 350
+        ):
+            raise ValueError("Sensitivity must be between 1 and 350.")
 
         interval = settings.get("min_interval_ms", 120)
-        if not isinstance(interval, int) or not 50 <= interval <= 2000:
-            raise ValueError("Der Mindestabstand muss zwischen 50 und 2000 ms liegen.")
+        if (
+            isinstance(interval, bool)
+            or not isinstance(interval, int)
+            or not 50 <= interval <= 2000
+        ):
+            raise ValueError(
+                "Minimum interval must be between 50 and 2000 ms."
+            )
 
-        weights = settings.get("eq_weights", self.DEFAULT_GLOBAL_SETTINGS["eq_weights"])
+        weights = settings.get(
+            "eq_weights",
+            self.DEFAULT_GLOBAL_SETTINGS["eq_weights"],
+        )
+
         if (
             not isinstance(weights, list)
             or len(weights) != 8
-            or any(not isinstance(value, (int, float)) or not 0 <= value <= 1000
-                   for value in weights)
+            or any(
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not 0 <= value <= 1000
+                for value in weights
+            )
         ):
-            raise ValueError("Es werden acht EQ-Gewichte zwischen 0 und 1000 benötigt.")
+            raise ValueError(
+                "Eight EQ weights between 0 and 1000 are required."
+            )
 
         device_index = settings.get("device_index")
+
         if device_index is not None and (
-            not isinstance(device_index, int) or device_index < 0
+            isinstance(device_index, bool)
+            or not isinstance(device_index, int)
+            or device_index < 0
         ):
-            raise ValueError("Der Audio-Geräteindex muss leer oder eine Zahl ab 0 sein.")
+            raise ValueError(
+                "Audio device index must be empty or an integer >= 0."
+            )
+
+        return settings
 
     # --------------------------------------------------------
-    # Start / Stopp
+    # Start / stop / state
     # --------------------------------------------------------
 
-    def start(self, name):
-        sequence = self.load_sequence(name)
-
-        # Vor dem Aktivieren sicherstellen, dass die Einstellungen gültig sind.
+    def start(self, sequence_id):
+        sequence = self.load_sequence(sequence_id)
         effective_settings = self.get_effective_settings(sequence)
 
-        self.active_sequence = sequence["name"]
+        self.active_sequence = sequence["id"]
         self.running = True
         self.error = None
 
@@ -337,7 +616,7 @@ class AudioSequenceManager:
         }
 
     # --------------------------------------------------------
-    # Datei-Hilfsfunktion
+    # JSON helper
     # --------------------------------------------------------
 
     @staticmethod

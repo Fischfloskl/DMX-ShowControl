@@ -42,7 +42,7 @@ Scene: {{ scene.name }}
 
 
 <button
-class="btn-success"
+class="btn-success "
 type="submit">
 
 Save
@@ -126,98 +126,158 @@ value="{{ device.id }}">
 
 
 
+
 <div class="card">
+    <h3>DMX Channels</h3>
 
+    {% set functions = device.channel_functions if device.channel_functions is defined else [] %}
 
-<h3>
-DMX Channels
-</h3>
+    {# Render RGB/RGBW zones first #}
+    {% for zone in [1, 2, 3] %}
+        {% set z = namespace(r=0, g=0, b=0, w=0) %}
 
+        {% for c in range(device.channels) %}
+            {% set fn = functions[c] if c < functions|length else 'Fader' %}
 
+            {% if fn == 'R' ~ zone %}
+                {% set z.r = c + 1 %}
+            {% elif fn == 'G' ~ zone %}
+                {% set z.g = c + 1 %}
+            {% elif fn == 'B' ~ zone %}
+                {% set z.b = c + 1 %}
+            {% elif fn == 'W' ~ zone %}
+                {% set z.w = c + 1 %}
+            {% endif %}
+        {% endfor %}
 
+        {% if z.r and z.g and z.b %}
+            {% set rv = scene.devices[device.id|string].get(z.r|string, 0) %}
+            {% set gv = scene.devices[device.id|string].get(z.g|string, 0) %}
+            {% set bv = scene.devices[device.id|string].get(z.b|string, 0) %}
+            {% set wv = scene.devices[device.id|string].get(z.w|string, 0) if z.w else 0 %}
 
-{% for c in range(device.channels) %}
+            <div class="channel-card">
+                <div class="channel-header">
+                    <span class="channel-name">Color Zone {{ zone }}</span>
+                </div>
 
+                <div style="font-size:12px;color:#888;margin-bottom:10px;">
+                    RGB{% if z.w %}W{% endif %} color control
+                </div>
 
-{% set channel = c + 1 %}
+                <input
+                    type="color"
+                    class="dmx-color-picker"
+                    value="{{ '#%02x%02x%02x'|format(rv, gv, bv) }}"
+                    data-r-channel="{{ z.r }}"
+                    data-g-channel="{{ z.g }}"
+                    data-b-channel="{{ z.b }}"
+                    style="width:100%;height:55px;cursor:pointer;"
+                >
 
+                <input type="hidden" name="ch_{{ z.r }}" value="{{ rv }}">
+                <input type="hidden" name="ch_{{ z.g }}" value="{{ gv }}">
+                <input type="hidden" name="ch_{{ z.b }}" value="{{ bv }}">
 
-{% set value = scene.devices[device.id|string].get(channel|string, 0) %}
+                <div style="font-size:12px;color:#888;margin-top:8px;">
+                    DMX {{ device.start_channel + z.r - 1 }} – Red,
+                    DMX {{ device.start_channel + z.g - 1 }} – Green,
+                    DMX {{ device.start_channel + z.b - 1 }} – Blue
+                </div>
 
+                {% if z.w %}
+                    <div class="channel-header" style="margin-top:15px;">
+                        <span class="channel-name">White</span>
+                        <span class="channel-value" id="value_{{ z.w }}">
+                            {{ wv if wv > 0 else '' }}
+                        </span>
+                    </div>
 
+                    <div style="font-size:12px;color:#888;">
+                        DMX {{ device.start_channel + z.w - 1 }}
+                    </div>
 
+                    <input
+                        type="range"
+                        min="0"
+                        max="255"
+                        value="{{ wv }}"
+                        name="ch_{{ z.w }}"
+                        class="dmx-slider"
+                        oninput="updateSlider(this)"
+                    >
+                {% endif %}
+            </div>
+            <br>
+        {% endif %}
+    {% endfor %}
 
-<div class="channel-card">
+    {# Render all channels not used by a complete RGB zone #}
+    {% for c in range(device.channels) %}
+        {% set channel = c + 1 %}
+        {% set fn = functions[c] if c < functions|length else 'Fader' %}
+        {% set skip = namespace(value=false) %}
 
+        {% for zone in [1, 2, 3] %}
+            {% set z = namespace(r=0, g=0, b=0, w=0) %}
 
-<div class="channel-header">
+            {% for i in range(device.channels) %}
+                {% set f = functions[i] if i < functions|length else 'Fader' %}
+                {% if f == 'R' ~ zone %}
+                    {% set z.r = i + 1 %}
+                {% elif f == 'G' ~ zone %}
+                    {% set z.g = i + 1 %}
+                {% elif f == 'B' ~ zone %}
+                    {% set z.b = i + 1 %}
+                {% elif f == 'W' ~ zone %}
+                    {% set z.w = i + 1 %}
+                {% endif %}
+            {% endfor %}
 
+            {% if z.r and z.g and z.b %}
+                {% if channel == z.r or channel == z.g or channel == z.b or (z.w and channel == z.w) %}
+                    {% set skip.value = true %}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
 
-<span class="channel-name">
+        {% if not skip.value and fn != 'Disabled' %}
+            {% set value = scene.devices[device.id|string].get(channel|string, 0) %}
 
-CH{{ channel }}:
-{{ device.channel_names[c] }}
+            <div class="channel-card">
+                <div class="channel-header">
+                    <span class="channel-name">
+                        CH{{ channel }}:
+                        {{ device.channel_names[c] if c < device.channel_names|length else 'CH' ~ channel }}
+                    </span>
 
-</span>
+                    <span class="channel-value" id="value_{{ channel }}">
+                        {{ value if value > 0 else '' }}
+                    </span>
+                </div>
 
+                <div style="font-size:12px;color:#888;">
+                    DMX {{ device.start_channel + c }}
+                    {% if fn != 'Fader' %}
+                        · {{ fn }}
+                    {% endif %}
+                </div>
 
-
-<span
-class="channel-value"
-id="value_{{ channel }}">
-
-{% if value > 0 %}
-{{ value }}
-{% endif %}
-
-</span>
-
-
+                <input
+                    type="range"
+                    min="0"
+                    max="255"
+                    value="{{ value }}"
+                    name="ch_{{ channel }}"
+                    class="dmx-slider"
+                    oninput="updateSlider(this)"
+                >
+            </div>
+            <br>
+        {% endif %}
+    {% endfor %}
 </div>
 
-
-
-
-<div style="font-size:12px;color:#888;">
-
-DMX {{ device.start_channel + c }}
-
-</div>
-
-
-
-
-
-<input
-
-type="range"
-
-min="0"
-
-max="255"
-
-value="{{ value }}"
-
-name="ch_{{ channel }}"
-
-class="dmx-slider"
-
-oninput="updateSlider(this)"
-
->
-
-
-
-</div>
-
-<br>
-<br>
-
-{% endfor %}
-
-
-
-</div>
 
 
 
@@ -231,7 +291,7 @@ oninput="updateSlider(this)"
 
 
 <button
-class="btn-success"
+class="btn-success save-button"
 type="submit">
 
 Save
@@ -310,6 +370,30 @@ Delete device
 
 <script>
 
+
+function updateColorPicker(picker) {
+    const hex = picker.value.replace("#", "");
+
+    const red = parseInt(hex.substring(0, 2), 16);
+    const green = parseInt(hex.substring(2, 4), 16);
+    const blue = parseInt(hex.substring(4, 6), 16);
+
+    const values = {
+        [picker.dataset.rChannel]: red,
+        [picker.dataset.gChannel]: green,
+        [picker.dataset.bChannel]: blue
+    };
+
+    Object.entries(values).forEach(([channel, value]) => {
+        const input = document.querySelector(
+            `input[name="ch_${channel}"]`
+        );
+
+        if (input) {
+            input.value = value;
+        }
+    });
+}
 
 function updateSlider(slider){
 
