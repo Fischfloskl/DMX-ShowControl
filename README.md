@@ -203,6 +203,33 @@ See [`LICENSE`](LICENSE) for the full license text.
 
 ---
 
+## 🖼️ Screenshots
+
+<details>
+  <summary><b>(Click to expand)</b></summary>
+  <br>
+  <p align="center">
+    <img src="/Screenshots/DMX-ShowControl-Demo (1).png" alt="Screenshot Dashboard" width="700">
+    <br><i>Dashboard</i><br><br>
+    <img src="/Screenshots/DMX-ShowControl-Demo (2).png" alt="Screenshot Fades channel-mode" width="700">
+    <br><i>Fade-editor in single-channel-mode</i><br><br>
+    <img src="/Screenshots/DMX-ShowControl-Demo (3).png" alt="Screenshot Fades channel-mode - listed devices" width="700">
+    <br><i>Fade-editor in single-channel-mode - listed devices</i><br><br>
+    <img src="/Screenshots/DMX-ShowControl-Demo (4).png" alt="Screenshot Fades scene-mode" width="700">
+    <br><i>Fade-editor in scene-mode</i><br><br>
+    <img src="/Screenshots/DMX-ShowControl-Demo (5).png" alt="Screenshot Timing-tool" width="700">
+    <br><i>time measuring tool</i><br><br>
+    <img src="/Screenshots/DMX-ShowControl-Demo (6).png" alt="Screenshot 3D-Visualizer" width="700">
+    <br><i>3D Visualizer</i><br><br>
+    <img src="/Screenshots/DMX-ShowControl-Demo (7).png" alt="Screenshot Music-recognition" width="700">
+    <br><i>Music-recognition sequences</i><br><br>
+    <img src="/Screenshots/DMX-ShowControl-Demo (8).png" alt="Screenshot Scene editor" width="700">
+    <br><i>Scene editor</i><br><br>
+  </p>
+</details>
+
+
+---
 <p align="center">
   <strong>DMX-ShowControl</strong><br>
   Control your lights. Synchronize your show.
