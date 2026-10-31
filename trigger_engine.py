@@ -253,7 +253,7 @@ class TriggerEngine:
                         scene["name"]
                     )
 
-                    self.show_controller.stop_all()
+                    self.show_controller.stop_all(reset_dmx=False)
                     self.show_controller.reset()
 
                     self.dmx_manager.apply_scene(
@@ -263,20 +263,22 @@ class TriggerEngine:
                     #self.show_controller.reset()
                     
 
-            if action["type"] == "fade":
+            if action_type == "fade":
 
                 fade = self.fade_manager.get(
-                    action["target"]
+                    action.get(target)
                 )
 
 
                 if fade:
-                    self.show_controller.stop_all()
+                    self.show_controller.stop_all(reset_dmx=False)
                     self.show_controller.reset()
                     self.fade_engine.play(
                         fade
                     )
-                    #self.show_controller.reset()
+
+                    if not started:
+                        print("Fade could not be started.")
 
             # -------------------
             # Strobe
@@ -352,62 +354,10 @@ class TriggerEngine:
                 # Holt die Liste der Tasten aus der Action (z.B. ["Control", "Shift", "MediaPlayPause"])
                 keys = action.get("keys", [])
 
-                # Erweitertes Dictionary für Modifikatoren und Sondertasten
-                JS_TO_PYTHON_KEYS = {
-                    # Medientasten
-                    "MediaPlayPause": "play/pause media",
-                    "MediaTrackNext": "next track",
-                    "MediaTrackPrevious": "previous track",
-                    "MediaStop": "stop media",
-                    "AudioVolumeUp": "volume up",
-                    "AudioVolumeDown": "volume down",
-                    "AudioVolumeMute": "volume mute",
-                    
-                    # Modifikatoren (wichtig für Tastenkombis)
-                    "Control": "ctrl",
-                    "Shift": "shift",
-                    "Alt": "alt",
-                    "Meta": "windows",
-                    
-                    # Navigation & Pfeile
-                    "Enter": "enter",
-                    "Escape": "esc",
-                    "ArrowUp": "up",
-                    "ArrowDown": "down",
-                    "ArrowLeft": "left",
-                    "ArrowRight": "right",
-                    "Backspace": "backspace",
-                    "Tab": "tab",
-                    "Space": "space",
+                if keys:
+                    self.simulate_keyboard(keys)
 
-                    #alles in kleinbuschstaben:
-
-                    # Medientasten
-                    "mediaplaypause": "play/pause media",
-                    "mediatracknext": "next track",
-                    "mediatrackprevious": "previous track",
-                    "mediastop": "stop media",
-                    "audiovolumeup": "volume up",
-                    "audiovolumedown": "volume down",
-                    "audiovolumemute": "volume mute",
-                    
-                    # Modifikatoren (wichtig für Tastenkombis)
-                    "control": "ctrl",
-                    "shift": "shift",
-                    "alt": "alt",
-                    "meta": "windows",
-                    
-                    # Navigation & Pfeile
-                    "enter": "enter",
-                    "escape": "esc",
-                    "arrowup": "up",
-                    "arrowdown": "down",
-                    "arrowleft": "left",
-                    "arrowright": "right",
-                    "backspace": "backspace",
-                    "tab": "tab",
-                    "space": "space"
-                }
+                continue
 
             # -------------------
             # Audio-Sequenz START
@@ -459,7 +409,7 @@ class TriggerEngine:
 
                 continue
 
-                # Übersetze jede einzelne Taste aus der Liste
+                """# Übersetze jede einzelne Taste aus der Liste
                 translated_keys = []
                 for key in keys:
                     # Falls die Taste im Dict ist, nimm die Übersetzung. 
@@ -478,7 +428,7 @@ class TriggerEngine:
                         # Führt die gesamte Kombination gleichzeitig aus
                         keyboard.press_and_release(combination_string)
                     except Exception as e:
-                        print(f"Fehler bei Keyboard-Simulation: {e}")
+                        print(f"Fehler bei Keyboard-Simulation: {e}")"""
 
 
     def reset_timing(self):

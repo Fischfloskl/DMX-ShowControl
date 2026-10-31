@@ -2,7 +2,7 @@ import json
 import os
 import threading
 import time
-from fade_manager import fade_manager
+#from fade_manager import fade_manager
 import copy
 from name_helper import duplicate_name
 
@@ -163,98 +163,129 @@ class SequenceManager:
     # -------------------------
 
     def start(self, sequence):
+        if self.thread and self.thread.is_alive():
+            return False
 
         self.running = True
 
         self.thread = threading.Thread(
             target=self.run,
-            args=(sequence,)
+            args=(sequence,),
+            daemon=True
         )
 
         self.thread.start()
+        return True
 
 
 
     def run(self, sequence):
-
-        self.running = True
-
-        for step in sequence["steps"]:
-            if self.show_controller:
-                if self.show_controller.should_stop():
-                    break
-                if self.show_controller and self.show_controller.stopped():
-                    return
-
-            if not self.running:
-                break
-
-
-            if step["action"] == "scene":
-
-                scene = self.scene_manager.get(
-                    step["target"]
-                )
-
-                if scene:
-
-                    self.dmx.apply_scene(scene)
-
-            elif step["action"]=="fade":
-
-                fade = self.fade_manager.get(
-                    step["target"]
-                )
-
-                if fade:
-
-                    self.fade_engine.play(
-                        fade
-                    )
-                else:
-                    break
-
-            elif step["action"] == "strobe":
-
-                target = step.get("target")
-
-                if not target:
-                    continue
-
-                strobe = self.strobe_manager.get_id(
-                    target
-                )
-
-                if strobe:
-
-                    self.strobe_manager.start(
-                        strobe
-                    )
-
-                else:
-                    break
-
-
-            wait = step["time"] / 1000
-            elapsed = 0
-
-            while elapsed < wait:
+        try:
+            for step in sequence.get("steps", []):
 
                 if not self.running:
-                    return
+                    break
 
                 if self.show_controller and self.show_controller.stopped():
-                    return
+                    break
 
-                time.sleep(0.01)
-                elapsed += 0.01
+                action = step.get("action")
+                target = step.get("target")
 
+                # -------------------------
+                # Scene
+                # -------------------------
+                if action == "scene":
 
-        self.running = False
+                    self.fade_engine.stop()
+                    self.strobe_manager.stop()
+
+                    scene = self.scene_manager.get(target)
+
+                    if scene:
+                        self.dmx.apply_scene(scene)
+                    else:
+                        print(f"Sequence: Scene not found: {target}")
+                        break
+
+                # -------------------------
+                # Fade
+                # -------------------------
+                elif action == "fade":
+
+                    self.fade_engine.stop()
+                    self.strobe_manager.stop()
+
+                    fade = self.fade_manager.get(target)
+
+                    if fade:
+                        if not self.fade_engine.play(fade):
+                            print(f"Sequence: Could not start fade: {target}")
+                            break
+                    else:
+                        print(f"Sequence: Fade not found: {target}")
+                        break
+
+                # -------------------------
+                # Strobe
+                # -------------------------
+                elif action == "strobe":
+
+                    self.fade_engine.stop()
+                    self.strobe_manager.stop()
+
+                    if not target:
+                        continue
+
+                    strobe = self.strobe_manager.get_id(target)
+                    #strobe = self.strobe_manager.get_id(int(target))
+
+                    if strobe:
+                        self.strobe_manager.start(strobe)
+                    else:
+                        print(f"Sequence: Strobe not found: {target}")
+                        break
+
+                # -------------------------
+                # Wait
+                # -------------------------
+                try:
+                    wait = max(0, float(step.get("time", 0)) / 1000)
+                except (TypeError, ValueError):
+                    wait = 0
+
+                elapsed = 0
+
+                while elapsed < wait:
+
+                    if not self.running:
+                        return
+
+                    if self.show_controller and self.show_controller.stopped():
+                        return
+
+                    interval = min(0.01, wait - elapsed)
+                    time.sleep(interval)
+                    elapsed += interval
+
+        except Exception as exc:
+            print(f"Sequence error: {exc}")
+
+        finally:
+            self.running = False
 
     def stop(self):
         self.running = False
 
+        thread = self.thread
+
+        if thread and thread is not threading.current_thread():
+            thread.join()
+
+        if thread and not thread.is_alive():
+            self.thread = None
+
+            
     def set_controller(self, controller):
         self.show_controller = controller
 

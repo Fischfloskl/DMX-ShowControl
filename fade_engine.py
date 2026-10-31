@@ -12,23 +12,33 @@ class FadeEngine:
         self.scene_manager = None
         self.running = False
         self._lock = threading.Lock()
+        self._thread = None
+        self._cancel_event = None
+
 
     def play(self, fade):
         with self._lock:
-            if self.running:
+            if self._thread and self._thread.is_alive():
                 return False
 
+            cancel_event = threading.Event()
+
+            self._cancel_event = cancel_event
             self.running = True
 
-        thread = threading.Thread(
-            target=self._run,
-            args=(fade,),
-            daemon=True
-        )
-        thread.start()
+            self._thread = threading.Thread(
+                target=self._run,
+                args=(fade, cancel_event),
+                daemon=True
+            )
+
+            self._thread.start()
+
         return True
 
-    def _run(self, fade):
+    
+    
+    def _run(self, fade, cancel_event):
         try:
             duration = max(1, int(fade.get("duration", 1000)))
             refresh = max(1, int(self.settings.refresh_rate))
@@ -43,19 +53,29 @@ class FadeEngine:
             if not end_values:
                 return
 
-            mode = fade.get("mode", "merge")
+            mode = str(fade.get("mode", "merge")).lower()
 
-            # Merge starts from the current DMX output.
-            # Other modes use the configured start values.
-            if mode == "merge":
-                for channel in end_values:
-                    start_values[channel] = self.dmx_manager.current.get(
+            if mode not in ("merge", "overwrite"):
+                mode = "merge"
+
+            actual_start = {}
+
+            for channel in end_values:
+                if mode == "merge":
+                    start = self.dmx_manager.current.get(
                         channel,
                         start_values.get(channel, 0)
                     )
+                else:
+                    start = start_values.get(channel, 0)
 
-            for step in range(steps + 1):
-                if not self.running:
+                actual_start[channel] = max(0, min(255, int(start)))
+
+            # Apply the initial values (delta updates skip unchanged channels)
+            self.dmx_manager.apply_values(actual_start)
+
+            for step in range(1, steps + 1):
+                if cancel_event.is_set():
                     return
 
                 if self.show_controller and self.show_controller.stopped():
@@ -65,24 +85,30 @@ class FadeEngine:
                 values = {}
 
                 for channel, end in end_values.items():
-                    start = start_values.get(channel, 0)
+                    start = actual_start[channel]
+
                     values[channel] = max(
                         0,
                         min(255, int(start + (end - start) * progress))
                     )
 
                 self.dmx_manager.apply_values(values)
-                time.sleep(delay)
 
-            if self.running:
-                self.dmx_manager.apply_values(end_values)
+                if step < steps:
+                    if cancel_event.wait(delay):
+                        return
 
         except Exception as exc:
             print(f"Fade error: {exc}")
 
         finally:
             with self._lock:
-                self.running = False
+                if self._thread is threading.current_thread():
+                    self.running = False
+                    self._thread = None
+                    self._cancel_event = None
+
+
 
     def _custom_values(self, fade):
         start_values = {}
@@ -204,7 +230,21 @@ class FadeEngine:
         return start_values, end_values
 
     def stop(self):
-        self.running = False
+        with self._lock:
+            cancel_event = self._cancel_event
+            thread = self._thread
+
+            if cancel_event:
+                cancel_event.set()
+
+        if thread and thread is not threading.current_thread():
+            thread.join()
+
+        with self._lock:
+            if self._thread is thread:
+                self._thread = None
+                self._cancel_event = None
+                self.running = False
 
     def set_controller(self, controller):
         self.show_controller = controller

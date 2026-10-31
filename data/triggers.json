@@ -83,6 +83,36 @@
             "keys": [
                 "s"
             ]
+        },
+        {
+            "id": 11,
+            "actions": [
+                {
+                    "type": "scene",
+                    "target": "fast 1"
+                }
+            ],
+            "name": "scene 1",
+            "enabled": true,
+            "type": "keyboard",
+            "keys": [
+                "1"
+            ]
+        },
+        {
+            "id": 12,
+            "actions": [
+                {
+                    "type": "scene",
+                    "target": "fast 2"
+                }
+            ],
+            "name": "scene 2",
+            "enabled": true,
+            "type": "keyboard",
+            "keys": [
+                "2"
+            ]
         }
     ]
 }

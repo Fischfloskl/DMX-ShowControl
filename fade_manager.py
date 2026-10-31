@@ -17,45 +17,57 @@ class FadeManager:
     def load(self):
 
         if not os.path.exists(self.FILE):
-
             self.fades = []
             self.save()
             return
 
         try:
-
             with open(
                 self.FILE,
                 "r",
                 encoding="utf-8"
             ) as f:
-
                 data = json.load(f)
 
             self.fades = data.get("data", [])
+            changed = False
 
             for fade in self.fades:
 
-                if "mode" not in fade:
-                    fade["mode"] = "merge"
+                mode = str(
+                    fade.get("mode", "merge")
+                ).lower()
+
+                if mode == "exclusive":
+                    mode = "overwrite"
+
+                if mode not in ("merge", "overwrite"):
+                    mode = "merge"
+
+                if fade.get("mode") != mode:
+                    fade["mode"] = mode
+                    changed = True
 
                 if "devices" not in fade:
                     fade["devices"] = []
+                    changed = True
+
+            if changed:
+                self.save()
 
         except Exception as e:
 
             print(
-                "Fehler beim Laden von fades.json:",
+                "Error loading fades.json:",
                 e
             )
 
-            # Backup erstellen
             try:
                 os.rename(
                     self.FILE,
                     self.FILE + ".broken"
                 )
-            except:
+            except OSError:
                 pass
 
             self.fades = []
@@ -158,10 +170,14 @@ class FadeManager:
 
     def get_id(self, fade_id):
 
+        try:
+            fade_id = int(fade_id)
+        except (TypeError, ValueError):
+            return None
+
         for fade in self.fades:
 
             if fade["id"] == fade_id:
-
                 return fade
 
         return None

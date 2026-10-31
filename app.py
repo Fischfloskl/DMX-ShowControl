@@ -135,7 +135,9 @@ fade_engine.set_controller(
 sequence_manager.set_controller(
     show_controller
 )
-
+strobe_manager.set_controller(
+    show_controller
+)
 
 # ----------------------------
 # Weitere Manager
@@ -165,7 +167,9 @@ trigger_engine = TriggerEngine(
 export_manager = ExportManager(
     scene_manager,
     fade_manager,
+    strobe_manager,
     sequence_manager,
+    audio_sequence_manager,
     trigger_manager,
     devices
 )
@@ -173,7 +177,9 @@ export_manager = ExportManager(
 import_manager = ImportManager(
     scene_manager,
     fade_manager,
+    strobe_manager,
     sequence_manager,
+    audio_sequence_manager,
     trigger_manager,
     devices
 )
@@ -799,12 +805,6 @@ def save_fade_device():
     if not device:
         return "Device not found", 404
 
-    mode = request.form.get("mode", "merge")
-    if mode not in {"merge", "overwrite", "exclusive"}:
-        return "Invalid fade mode", 400
-
-    fade["mode"] = mode
-
     channel_count = int(device["channels"])
     functions = device.get("channel_functions", [])
 
@@ -938,7 +938,7 @@ def save_fade():
         return "Invalid duration unit", 400
 
     fade["name"] = name
-    fade["duration"] = duration
+    fade["duration_unit"] = unit
     fade["type"] = fade_type
 
     if fade_type == "scenes":
@@ -962,6 +962,13 @@ def save_fade():
         fade.pop("start_scene", None)
         fade.pop("end_scene", None)
 
+    mode = request.form.get("mode", "merge")
+
+    if mode not in {"merge", "overwrite"}:
+        return "Invalid fade mode", 400
+
+    fade["mode"] = mode
+
     fade_manager.save()
 
     #return redirect(f"/fades/edit?id={fade_id}")
@@ -970,17 +977,13 @@ def save_fade():
 @app.route("/dmx/clear")
 def dmx_clear():
 
-
-    show_controller.stop_all()
+    show_controller.stop_all(reset_dmx=False)
 
     dmx_manager.clear()
-    strobe_manager.stop()
 
     time.sleep(0.05)
 
     show_controller.reset()
-    
-    dmx_manager.reset_all()
 
     return redirect(request.referrer or "/")
 
@@ -1829,7 +1832,7 @@ def settings_page():
     try:
         midi_ports = mido.get_input_names()
     except Exception as e:
-        print(f"MIDI-Ports konnten nicht geladen werden: {e}")
+        print(f"MIDI-Ports couldn't be loaded: {e}")
         midi_ports = []
 
     return render_template(
@@ -1915,7 +1918,9 @@ def export_show():
             "fades": "Fades",
             "sequences": "Sequences",
             "triggers": "Triggers",
-            "devices": "Devices"
+            "devices": "Devices",
+            "strobes": "Strobes",
+            "audio_sequences": "AudioSequences"
         }
 
         filename = (
@@ -1935,7 +1940,9 @@ def export_show():
             "fades": "Fades",
             "sequences": "Sequences",
             "triggers": "Triggers",
-            "devices": "Devices"
+            "devices": "Devices",
+            "strobes": "Strobes",
+            "audio_sequences": "AudioSequences"
         }
 
 
@@ -2009,7 +2016,7 @@ def import_show():
 
     if not file:
 
-        return "Keine Datei",400
+        return "No File",400
 
 
 
@@ -2186,11 +2193,11 @@ def remove_external_application():
 @app.route("/settings/midi-learn/<target>", methods=["POST"])
 def start_midi_learning(target):
     if target not in ("highest", "lowest"):
-        return jsonify({"error": "Ungültiges Lernziel"}), 400
+        return jsonify({"error": "Invalid target"}), 400
 
     if not midi_manager.port:
         return jsonify({
-            "error": "Kein MIDI-Eingang verbunden."
+            "error": "No MIDI-Input connected"
         }), 400
 
     midi_manager.start_learning(target)
@@ -2258,16 +2265,16 @@ def save_midi_calibration():
     if expected_lowest is None:
         return jsonify({
             "error": (
-                "Ungültiger Name der tiefsten Note. "
-                "Beispiele: C-2, C#3 oder Db4."
+                "Invalid name of lowest note. "
+                "E.g.: C-2, C#3 oder Db4."
             )
         }), 400
 
     if expected_highest is None:
         return jsonify({
             "error": (
-                "Ungültiger Name der höchsten Note. "
-                "Beispiele: G8 oder C5."
+                "Invalid name of highest note. "
+                "E.g.: G8 oder C5."
             )
         }), 400
 
@@ -2288,19 +2295,19 @@ def save_midi_calibration():
 
     except (TypeError, ValueError):
         return jsonify({
-            "error": "Ungültige MIDI-Notennummern."
+            "error": "Invalid MIDI-notenumbers."
         }), 400
 
     if not (0 <= lowest <= 127 and 0 <= highest <= 127):
         return jsonify({
-            "error": "MIDI-Noten müssen zwischen 0 und 127 liegen."
+            "error": "MIDI-notes must be between 0 and 127."
         }), 400
 
     if highest <= lowest:
         return jsonify({
             "error": (
-                "Die höchste Referenznote muss höher sein "
-                "als die tiefste Referenznote."
+                "The highest reference-note must be higher"
+                "than the lowest reference-note."
             )
         }), 400
 
@@ -2309,8 +2316,8 @@ def save_midi_calibration():
     if expected_lowest != lowest:
         return jsonify({
             "error": (
-                f"{name_lowest} entspricht nach der Ableton-Konvention "
-                f"MIDI {expected_lowest}, eingelernt wurde aber MIDI "
+                f"{name_lowest} according to the convention, this corresponds to "
+                f"MIDI {expected_lowest}, but MIDI was programmed as "
                 f"{lowest}."
             )
         }), 400
@@ -2318,8 +2325,8 @@ def save_midi_calibration():
     if expected_highest != highest:
         return jsonify({
             "error": (
-                f"{name_highest} entspricht nach der Ableton-Konvention "
-                f"MIDI {expected_highest}, eingelernt wurde aber MIDI "
+                f"{name_highest} according to the convention, this corresponds to "
+                f"MIDI {expected_highest}, But MIDI was programmed in "
                 f"{highest}."
             )
         }), 400
@@ -2335,7 +2342,7 @@ def save_midi_calibration():
     return jsonify({
         "success": True,
         "message": (
-            f"Zuordnung gespeichert: {name_lowest} = MIDI {lowest}, "
+            f"Assignment saved: {name_lowest} = MIDI {lowest}, "
             f"{name_highest} = MIDI {highest}."
         )
     })
@@ -3693,3 +3700,9 @@ def audio_sequence_start(name):
             "success": False,
             "error": str(error),
         }), 500
+
+
+
+@app.route("/timeline-test")
+def timeline_test():
+    return render_template("timeline_test.html", mode="edit")

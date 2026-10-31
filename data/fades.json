@@ -6,7 +6,7 @@
             "id": 1,
             "name": "1",
             "duration": 5000,
-            "mode": "exclusive",
+            "mode": "overwrite",
             "devices": [
                 {
                     "device": 1,
@@ -61,7 +61,7 @@
                         },
                         {
                             "channel": 9,
-                            "enabled": false,
+                            "enabled": true,
                             "start": 0,
                             "end": 255
                         },
@@ -73,7 +73,7 @@
                         },
                         {
                             "channel": 11,
-                            "enabled": false,
+                            "enabled": true,
                             "start": 0,
                             "end": 255
                         },
@@ -85,7 +85,7 @@
                         },
                         {
                             "channel": 13,
-                            "enabled": false,
+                            "enabled": true,
                             "start": 0,
                             "end": 255
                         },
@@ -139,13 +139,15 @@
                         }
                     ]
                 }
-            ]
+            ],
+            "duration_unit": "ms",
+            "type": "custom"
         },
         {
             "id": 2,
             "name": "2",
             "duration": 5000,
-            "mode": "exclusive",
+            "mode": "overwrite",
             "devices": [
                 {
                     "device": 1,
@@ -277,8 +279,14 @@
                             "end": 255
                         }
                     ]
+                },
+                {
+                    "device": 2,
+                    "channels": []
                 }
-            ]
+            ],
+            "duration_unit": "ms",
+            "type": "custom"
         },
         {
             "id": 3,

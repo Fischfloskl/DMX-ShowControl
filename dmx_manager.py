@@ -11,88 +11,110 @@ class DMXManager:
     def clear(self):
         print("CLEAR ALL DMX CH")
 
-        self.current = {}
+        result = self.send("C")
 
-        return self.send("C")
+        if result is not False:
+            self.current = {
+                channel: 0
+                for channel in range(1, 513)
+            }
+
+        return result
 
 
 
+        
     def set_channel(self, channel, value):
 
-        value = max(
-            0,
-            min(255, int(value))
-        )
+        value = max(0, min(255, int(value)))
 
-        self.current[channel] = value
+        if self.current.get(channel, 0) == value:
+            return True
 
-        return self.send(
-            f"D;{channel};{value}"
-        )
+        result = self.send(f"D;{channel};{value}")
 
+        if result is not False:
+            self.current[channel] = value
 
+        return result
 
+        
     def apply_scene(self, scene):
-        print("APPLY SCENE")
-
-        values = {}
-
+        values = {
+            channel: 0
+            for channel in range(1, 513)
+        }
 
         for device_id, channels in scene["devices"].items():
 
-
-            device = devices.get_id(
-                int(device_id)
-            )
-
+            device = devices.get_id(int(device_id))
 
             if not device:
-
                 continue
-
 
             start = device["start_channel"]
 
-
             for ch, value in channels.items():
+                dmx_channel = start + int(ch) - 1
 
-                dmx_channel = (
-                    start
-                    + int(ch)
-                    - 1
-                )
+                if 1 <= dmx_channel <= 512:
+                    values[dmx_channel] = max(
+                        0,
+                        min(255, int(value))
+                    )
 
-
-                values[dmx_channel] = int(value)
-
-
-
-        self.current = values
+        return self.apply_full_state(values)
 
 
+    def apply_full_state(self, values):
 
-        parts = []
+        changed = {}
 
+        for channel in range(1, 513):
 
-        for ch in sorted(values):
-
-            parts.append(
-                f"{ch}:{values[ch]}"
+            new_value = max(
+                0,
+                min(255, int(values.get(channel, 0)))
             )
 
+            old_value = self.current.get(channel, 0)
 
-        return self.send(
-            "S;" + ";".join(parts)
-        )
+            if new_value != old_value:
+                changed[channel] = new_value
+
+        if not changed:
+            print("DMX: No changes")
+            return True
+
+        parts = [
+            f"{channel}:{value}"
+            for channel, value in sorted(changed.items())
+        ]
+
+        print(f"DMX: Sending {len(changed)} channel changes")
+
+        result = self.send("S;" + ";".join(parts))
+
+        if result is not False:
+            self.current = {
+                channel: max(
+                    0,
+                    min(255, int(values.get(channel, 0)))
+                )
+                for channel in range(1, 513)
+            }
+
+        return result
+
 
     
-    def set_scene(self, scene):
+    """def set_scene(self, scene):
         print("APPLY SCENE")
 
         # Alle DMX-Kanäle auf 0 setzen
         values = {
             ch: 0
-            for ch in range(1, 512)
+            for ch in range(1, 513)
         }
 
         for device_id, channels in scene["devices"].items():
@@ -117,7 +139,11 @@ class DMXManager:
             for ch in sorted(values)
         ]
 
-        return self.send("S;" + ";".join(parts))
+        return self.send("S;" + ";".join(parts))"""
+
+    def set_scene(self, scene):
+        print("APPLY SCENE")
+        return self.apply_scene(scene)
 
 
 
@@ -128,31 +154,44 @@ class DMXManager:
             command
         )
 
+        
     def apply_values(self, values):
 
-        self.current.update(values)
+        changed = {}
 
-        parts = []
+        for channel, value in values.items():
 
-        for ch in sorted(values):
-            parts.append(f"{ch}:{values[ch]}")
+            channel = int(channel)
 
-        return self.send(
-            "S;" + ";".join(parts)
-        )
+            if not 1 <= channel <= 512:
+                continue
+
+            value = max(0, min(255, int(value)))
+
+            if self.current.get(channel, 0) != value:
+                changed[channel] = value
+
+        if not changed:
+            return True
+
+        parts = [
+            f"{channel}:{value}"
+            for channel, value in sorted(changed.items())
+        ]
+
+        result = self.send("S;" + ";".join(parts))
+
+        if result is not False:
+            self.current.update(changed)
+
+        return result
+
 
     def reset_all(self):
 
-        values = {}
+        values = {
+            channel: 0
+            for channel in range(1, 513)
+        }
 
-        # alle 512 DMX Kanäle auf 0
-        for channel in range(1, 513):
-
-            values[channel] = 0
-
-
-        self.apply_values(values)
-
-
-        # internen Zustand löschen
-        self.current.clear()
+        return self.apply_values(values)

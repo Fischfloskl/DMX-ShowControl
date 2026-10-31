@@ -29,13 +29,14 @@ class StrobeManager:
         self.fade_manager = fade_manager
         self.fade_engine = fade_engine
         self.dmx_manager = dmx_manager
-
+        self.show_controller = None
         self.strobes = []
 
         # Laufender Strobe
         self.running = False
         self.thread = None
         self.current_strobe = None
+        self._cancel_event = None
 
         self.load()
 
@@ -309,29 +310,26 @@ class StrobeManager:
     # -----------------------------------------
 
     def start(self, strobe):
-
         if not strobe:
             return False
 
-        # Alten Strobe beenden
-        self.stop(
-            clear=False
-        )
+        self.stop(clear=False)
+
+        cancel_event = threading.Event()
 
         self.current_strobe = strobe
+        self._cancel_event = cancel_event
         self.running = True
 
         self.thread = threading.Thread(
             target=self._run,
+            args=(strobe, cancel_event),
             daemon=True
         )
 
         self.thread.start()
 
-        print(
-            "Strobe gestartet:",
-            strobe.get("name")
-        )
+        print("Strobe started:", strobe.get("name"))
 
         return True
 
@@ -340,203 +338,119 @@ class StrobeManager:
     # STOP
     # -----------------------------------------
 
-    def stop(self, clear=True):
+    def stop(self, clear=False):
+        cancel_event = self._cancel_event
+        thread = self.thread
 
-        self.running = False
+        if cancel_event:
+            cancel_event.set()
 
-        self.current_strobe = None
+        if thread and thread is not threading.current_thread():
+            thread.join()
+
+        # Only clean up the strobe that was actually stopped.
+        if self._cancel_event is cancel_event:
+            self.running = False
+            self.thread = None
+            self.current_strobe = None
+            self._cancel_event = None
 
         if clear:
-
             self.dmx_manager.clear()
 
-        print(
-            "Strobe gestoppt"
-        )
+        print("Strobe stopped")
 
 
     # -----------------------------------------
     # RUN
     # -----------------------------------------
 
-    def _run(self):
+    def _run(self, strobe, cancel_event):
 
-        strobe = self.current_strobe
+        try:
+            mode = strobe.get("mode", "timed")
 
-        if not strobe:
-            return
+            cycles = max(1, int(strobe.get("cycles", 1)))
+            duration = max(1, int(strobe.get("time", 1000))) / 1000
 
-        mode = strobe.get(
-            "mode",
-            "timed"
-        )
+            time_a = max(1, int(strobe.get("time_a", 100))) / 1000
+            time_b = max(1, int(strobe.get("time_b", 100))) / 1000
 
-        cycles = max(
-            1,
-            int(
-                strobe.get(
-                    "cycles",
-                    1
-                )
-            )
-        )
+            states = strobe.get("states", [])
 
-        duration = max(
-            1,
-            int(
-                strobe.get(
-                    "time",
-                    1000
-                )
-            )
-        ) / 1000
+            if not states:
+                print("Strobe contains no states.")
+                return
 
-        time_a = max(
-            1,
-            int(
-                strobe.get(
-                    "time_a",
-                    100
-                )
-            )
-        ) / 1000
+            # ---------------------------------
+            # COUNTED
+            # ---------------------------------
+            if mode == "counted":
 
-        time_b = max(
-            1,
-            int(
-                strobe.get(
-                    "time_b",
-                    100
-                )
-            )
-        ) / 1000
+                for cycle in range(cycles):
 
-        states = strobe.get(
-            "states",
-            []
-        )
-
-        if not states:
-
-            print(
-                "Strobe enthält keine Zustände."
-            )
-
-            self.running = False
-            self.current_strobe = None
-
-            return
-
-        # ---------------------------------
-        # COUNTED
-        # ---------------------------------
-
-        if mode == "counted":
-
-            for cycle in range(cycles):
-
-                if not self.running:
-                    return
-
-                for index, state in enumerate(states):
-
-                    if not self.running:
+                    if cancel_event.is_set():
                         return
 
-                    self._apply_state(
-                        state
-                    )
+                    for index, state in enumerate(states):
 
-                    if index % 2 == 0:
-                        delay = time_a
-                    else:
-                        delay = time_b
+                        if cancel_event.is_set():
+                            return
 
-                    if not self._wait(delay):
-                        return
+                        self._apply_state(state)
 
-        # ---------------------------------
-        # TIMED
-        # ---------------------------------
+                        delay = time_a if index % 2 == 0 else time_b
 
-        elif mode == "timed":
+                        if not self._wait(delay, cancel_event):
+                            return
 
-            end_time = (
-                time.perf_counter()
-                + duration
-            )
+            # ---------------------------------
+            # TIMED
+            # ---------------------------------
+            elif mode == "timed":
 
-            cycle = 0
+                end_time = time.perf_counter() + duration
 
-            while self.running:
+                while not cancel_event.is_set():
 
-                for index, state in enumerate(states):
+                    for index, state in enumerate(states):
 
-                    if not self.running:
-                        return
+                        if cancel_event.is_set():
+                            return
 
-                    # Zeit bereits vorbei?
-                    remaining = (
-                        end_time
-                        - time.perf_counter()
-                    )
+                        remaining = end_time - time.perf_counter()
 
-                    if remaining <= 0:
-                        break
+                        if remaining <= 0:
+                            return
 
-                    # Zustand anwenden
-                    self._apply_state(
-                        state
-                    )
+                        self._apply_state(state)
 
-                    # A / B
-                    if index % 2 == 0:
-                        delay = time_a
-                    else:
-                        delay = time_b
-
-                    # Nicht über die Gesamtzeit hinauslaufen
-                    delay = min(
-                        delay,
-                        max(
-                            0,
-                            end_time
-                            - time.perf_counter()
+                        delay = time_a if index % 2 == 0 else time_b
+                        delay = min(
+                            delay,
+                            max(0, end_time - time.perf_counter())
                         )
-                    )
 
-                    if delay <= 0:
-                        break
+                        if delay <= 0:
+                            return
 
-                    if not self._wait(delay):
-                        return
+                        if not self._wait(delay, cancel_event):
+                            return
 
-                else:
-                    # Alle States dieser Runde wurden
-                    # vollständig ausgeführt.
-                    cycle += 1
-                    continue
+            else:
+                print("Unknown strobe mode:", mode)
 
-                # Schleife wurde wegen Zeitende verlassen
-                break
+        except Exception as exc:
+            print(f"Strobe error: {exc}")
 
-        else:
+        finally:
+            if self._cancel_event is cancel_event:
+                self.running = False
+                self.current_strobe = None
+                self.thread = None
+                self._cancel_event = None
 
-            print(
-                "Unbekannter Strobe-Modus:",
-                mode
-            )
-
-        # ---------------------------------
-        # Fertig
-        # ---------------------------------
-
-        self.running = False
-        self.current_strobe = None
-
-        print(
-            "Strobe beendet"
-        )
+            print("Strobe finished")
 
 
     # -----------------------------------------
@@ -544,14 +458,10 @@ class StrobeManager:
     # -----------------------------------------
 
     def _apply_state(self, state):
+        self.fade_engine.stop()
 
-        state_type = state.get(
-            "type"
-        )
-
-        state_id = state.get(
-            "target"
-        )
+        state_type = state.get("type")
+        state_id = state.get("target")
 
 
         # ---------------------------------
@@ -653,24 +563,19 @@ class StrobeManager:
 
         return True
 
-    def _wait(self, duration):
-
+    def _wait(self, duration, cancel_event):
         end = time.perf_counter() + duration
 
-        while self.running:
-
-            remaining = (
-                end - time.perf_counter()
-            )
+        while not cancel_event.is_set():
+            remaining = end - time.perf_counter()
 
             if remaining <= 0:
                 return True
 
-            time.sleep(
-                min(
-                    0.01,
-                    remaining
-                )
-            )
+            if cancel_event.wait(min(0.01, remaining)):
+                return False
 
         return False
+
+    def set_controller(self, controller):
+        self.show_controller = controller

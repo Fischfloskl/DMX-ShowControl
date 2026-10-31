@@ -22,7 +22,8 @@ class ShowController:
     def emergency_stop(self):
         self.stop_all()
 
-    def stop_all(self):
+        
+    def stop_all(self, reset_dmx=True):
 
         print("STOP ALL")
 
@@ -32,12 +33,11 @@ class ShowController:
         self.fade_engine.stop()
         self.strobe_manager.stop()
 
+        if reset_dmx:
+            self.dmx_manager.reset_all()
 
-
-        self.dmx_manager.reset_all()
 
     def reset(self):
-
         self.stop_event.clear()
 
 

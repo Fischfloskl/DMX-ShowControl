@@ -56,10 +56,10 @@ void setup() {
   Serial.begin(115200);
   //lampe reset
   DmxSimple.usePin(2); //digital output für DMX - serielle daten
-  DmxSimple.write(1, 255);
+  /*DmxSimple.write(1, 255);
   DmxSimple.write(31, 0);
   DmxSimple.write(33, 0);
-  DmxSimple.write(37, 255);
+  DmxSimple.write(37, 255);*/
 
   //Pinmodes:
   pinMode(BuzzerlightRed_1, OUTPUT);

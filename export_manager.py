@@ -10,7 +10,9 @@ class ExportManager:
         self,
         scene_manager,
         fade_manager,
+        strobe_manager,
         sequence_manager,
+        audio_sequence_manager,
         trigger_manager,
         devices
     ):
@@ -20,6 +22,8 @@ class ExportManager:
         self.sequence_manager = sequence_manager
         self.trigger_manager = trigger_manager
         self.devices = devices
+        self.strobe_manager = strobe_manager
+        self.audio_sequence_manager = audio_sequence_manager
 
 
 
@@ -48,12 +52,47 @@ class ExportManager:
             )
 
 
+        if "strobes" in items:
+            data["strobes"] = copy.deepcopy(
+                self.strobe_manager.strobes
+            )
+
+
 
         if "sequences" in items:
 
             data["sequences"] = copy.deepcopy(
                 self.sequence_manager.sequences
             )
+
+
+
+        if "audio_sequences" in items:
+
+            sequences = []
+
+            for item in self.audio_sequence_manager.list_sequences():
+
+                if item.get("error"):
+                    continue
+
+                sequence = self.audio_sequence_manager.load_sequence(
+                    item["id"]
+                )
+
+                sequences.append(sequence)
+
+            global_settings = (
+                self.audio_sequence_manager.get_global_settings()
+            )
+
+            # Audio device indices are local to each computer.
+            global_settings.pop("device_index", None)
+
+            data["audio_sequences"] = {
+                "sequences": sequences,
+                "global_settings": global_settings
+            }
 
 
 

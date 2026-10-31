@@ -114,10 +114,10 @@ webview.create_window(
 
 
 try:
-    if settings.midi_input_port:
+    """if settings.midi_input_port: #midi-start
         midi_manager.connect(
                 settings.midi_input_port or ""
-            )
+            )"""
     webview.start()
 
 finally:

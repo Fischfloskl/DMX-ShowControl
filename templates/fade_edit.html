@@ -30,16 +30,27 @@
                 class="btna"
                 type="number"
                 name="duration"
-                value="{{ (fade.get('duration', 1000) / 60000)|int if fade.get('duration_unit') == 'min' else fade.get('duration', 1000) }}"
+                value="{{ (fade.get('duration', 1000) / 60000)|int if fade.get('duration_unit') == 'min' else (fade.get('duration', 1000) / 1000)|int if fade.get('duration_unit') == 'sec' else fade.get('duration', 1000) }}"
                 min="1"
                 id="duration"
                 required
             >
 
             <select class="btna" name="duration_unit" id="duration_unit">
-                <option value="ms">Milliseconds</option>
-                <option value="sec">Seconds</option>
-                <option value="min">Minutes</option>
+                <option value="ms"
+                    {% if fade.get('duration_unit', 'ms') == 'ms' %}selected{% endif %}>
+                    Milliseconds
+                </option>
+
+                <option value="sec"
+                    {% if fade.get('duration_unit') == 'sec' %}selected{% endif %}>
+                    Seconds
+                </option>
+
+                <option value="min"
+                    {% if fade.get('duration_unit') == 'min' %}selected{% endif %}>
+                    Minutes
+                </option>
             </select>
         </div>
 
@@ -60,6 +71,46 @@
                 Scenes
             </option>
         </select>
+
+        <br><br>
+
+        <label>Fade Mode</label>
+
+        <div class="mode-selector">
+
+            <label class="mode-option">
+                <input
+                    type="radio"
+                    name="mode"
+                    value="merge"
+                    {% if fade.get('mode', 'merge') == 'merge' %}checked{% endif %}
+                >
+
+                <div class="mode-card">
+                    <strong>Merge</strong>
+                    <span>
+                        Start from the current DMX values of the selected channels.
+                    </span>
+                </div>
+            </label>
+
+            <label class="mode-option">
+                <input
+                    type="radio"
+                    name="mode"
+                    value="overwrite"
+                    {% if fade.get('mode', 'merge') == 'overwrite' %}checked{% endif %}
+                >
+
+                <div class="mode-card">
+                    <strong>Overwrite</strong>
+                    <span>
+                        Start from the configured start values of the selected channels.
+                    </span>
+                </div>
+            </label>
+
+        </div>
 
         <div id="scene_options" style="display:none; margin-top:20px;">
             <label>Start Scene</label>

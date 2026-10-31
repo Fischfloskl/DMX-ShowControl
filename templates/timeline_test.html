@@ -1,0 +1,1051 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="timeline-page">
+    <div class="timeline-toolbar">
+        <div>
+            <h2>Timeline Test</h2>
+            <span class="timeline-subtitle">
+                Multi-track show arrangement · Preview mode
+            </span>
+        </div>
+
+        <div class="timeline-controls">
+            <button class="btn-secondary" id="addTrackBtn">+ Track</button>
+            <button class="btn-secondary" id="deleteTrackBtn">Delete Track</button>
+            <button class="btn-secondary" id="addClipBtn">+ Clip</button>
+            <button class="btn-danger" id="deleteClipBtn">Delete Clip</button>
+            <button class="btn-secondary" id="zoomOutBtn">−</button>
+            <span id="zoomLabel">100%</span>
+            <button class="btn-secondary" id="zoomInBtn">+</button>
+            <button class="btn-primary" id="playBtn">▶ Play</button>
+            <button class="btn-danger" id="stopBtn">■ Stop</button>
+        </div>
+    </div>
+
+    <div class="timeline-info">
+        <span>Position: <strong id="positionLabel">00:00.000</strong></span>
+        <label class="timeline-duration-control">Duration: [s]<input id="timelineDurationInput" type="number" min="1" step="0.01" value="20"></label>
+        <span id="statusLabel">Preview stopped</span>
+    </div>
+
+        
+        
+        
+    <div class="timeline-properties" id="timelineProperties">
+        <div class="timeline-properties-header">
+            <h3>Clip Properties</h3>
+            <span id="selectedClipType">-</span>
+        </div>
+        <div class="properties-grid">
+            <label>
+                Trackname:
+                <input id="propertyTrackName"
+                    class="timeline-inline-input"
+                    type="text"
+                    placeholder="-"
+                    disabled>
+            </label>
+
+            <label>
+                Track Type:
+                <select id="propertyTrackType"
+                        class="timeline-inline-input"
+                        disabled>
+                    <option value="Mixed">Mixed</option>
+                    <option value="Effects">Effects</option>
+                    <option value="Scenes">Scenes</option>
+                    <option value="Fades">Fades</option>
+                    <option value="Sequences">Sequences</option>
+                    <option value="Strobes">Strobes</option>
+                    <option value="Audio">Audio</option>
+                    <option value="MIDI">MIDI</option>
+                </select>
+            </label>
+        </div>
+    </div>
+
+
+
+
+    <div class="timeline-workspace" id="timelineWorkspace">
+        <div class="timeline-label-column">
+            <div class="timeline-corner">TRACKS</div>
+            <div id="trackLabels"></div>
+        </div>
+
+        <div class="timeline-scroll" id="timelineScroll">
+            <div class="timeline-content" id="timelineContent">
+                <div class="timeline-ruler" id="timelineRuler"></div>
+                <div class="timeline-tracks" id="timelineTracks"></div>
+                <div class="timeline-playhead" id="timelinePlayhead"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="timeline-hint">
+        Drag a clip to move it. Drag its right edge to resize it.
+        Click the ruler to move the playhead.
+        This test page does not send DMX data or save changes.
+        Hold Shift for 0.25s snapping.
+    </div>
+</div>
+
+<style>
+
+    
+.timeline-properties {
+    margin-bottom: 12px;
+    padding: 14px;
+    border: 1px solid rgba(128, 128, 128, .35);
+    border-radius: 8px;
+    background: rgba(128, 128, 128, .07);
+}
+
+.timeline-properties-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.timeline-properties h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.timeline-inline-input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 4px 6px;
+    border: 1px solid #6299dc;
+    border-radius: 4px;
+    background: var(--input-bg, #fff);
+    color: var(--input-color, #111);
+    font: inherit;
+}
+
+.timeline-track-label {
+    cursor: default;
+}
+
+.timeline-track-label input {
+    font-size: .85rem;
+}
+
+.timeline-info strong {
+    cursor: text;
+    border-bottom: 1px dashed currentColor;
+}
+
+.timeline-page {
+    --track-height: 58px;
+    --label-width: 170px;
+    --second-width: 100px;
+    color: var(--text-color, inherit);
+    padding-bottom: 20px;
+}
+
+.timeline-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.timeline-toolbar h2 {
+    margin: 0 0 4px;
+}
+
+.timeline-subtitle,
+.timeline-hint {
+    opacity: .7;
+    font-size: .85rem;
+}
+
+.timeline-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.timeline-controls button {
+    cursor: pointer;
+}
+
+#zoomLabel {
+    min-width: 48px;
+    text-align: center;
+    font-size: .85rem;
+}
+
+.timeline-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    background: rgba(128, 128, 128, .10);
+    font-size: .85rem;
+}
+
+.timeline-workspace {
+    display: grid;
+    grid-template-columns: var(--label-width) minmax(0, 1fr);
+    height: 390px;
+    min-height: 220px;
+    border: 1px solid rgba(128, 128, 128, .35);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.timeline-label-column {
+    overflow: hidden;
+    border-right: 1px solid rgba(128, 128, 128, .35);
+    background: var(--card-bg, rgba(128, 128, 128, .06));
+}
+
+.timeline-corner {
+    height: 38px;
+    box-sizing: border-box;
+    padding: 11px 10px;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    border-bottom: 1px solid rgba(128, 128, 128, .35);
+}
+
+.timeline-track-label {
+    height: var(--track-height);
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(128, 128, 128, .2);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.timeline-track-label strong {
+    font-size: .85rem;
+}
+
+.timeline-track-label small {
+    opacity: .65;
+    font-size: .72rem;
+}
+
+.timeline-scroll {
+    overflow: auto;
+    position: relative;
+    min-width: 0;
+}
+
+.timeline-content {
+    position: relative;
+    min-height: 100%;
+    background: rgba(128, 128, 128, .025);
+}
+
+.timeline-ruler {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    height: 38px;
+    border-bottom: 1px solid rgba(128, 128, 128, .4);
+    background: var(--card-bg, #20242b);
+    color: var(--text-color, inherit);
+    cursor: crosshair;
+}
+
+.timeline-tick {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    box-sizing: border-box;
+    border-left: 1px solid rgba(128, 128, 128, .35);
+    padding: 11px 5px;
+    font-size: .72rem;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.timeline-tracks {
+    position: relative;
+}
+
+.timeline-track {
+    position: relative;
+    height: var(--track-height);
+    box-sizing: border-box;
+    border-bottom: 1px solid rgba(128, 128, 128, .2);
+    background-image: linear-gradient(
+        to right,
+        transparent calc(100% - 1px),
+        rgba(128, 128, 128, .10) 1px
+    );
+    background-size: var(--second-width) 100%;
+}
+
+.timeline-clip {
+    position: absolute;
+    top: 7px;
+    height: 44px;
+    box-sizing: border-box;
+    min-width: 24px;
+    border: 1px solid rgba(255, 255, 255, .35);
+    border-radius: 5px;
+    padding: 6px 12px 6px 8px;
+    overflow: hidden;
+    color: white;
+    font-size: .78rem;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, .15);
+}
+
+.timeline-clip:active {
+    cursor: grabbing;
+}
+
+.timeline-clip.selected {
+    outline: 2px solid white;
+    outline-offset: 1px;
+}
+
+.clip-scene { background: #287caa; }
+.clip-fade { background: #8b5bb5; }
+.clip-sequence { background: #36865c; }
+.clip-strobe { background: #b65e35; }
+
+.timeline-clip .clip-type {
+    display: block;
+    font-size: .67rem;
+    opacity: .8;
+}
+
+.clip-resize {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 9px;
+    height: 100%;
+    cursor: ew-resize;
+    background: rgba(255, 255, 255, .15);
+}
+
+.timeline-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 8;
+    width: 2px;
+    background: #ff4e4e;
+    pointer-events: none;
+}
+
+.timeline-playhead::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -4px;
+    width: 10px;
+    height: 10px;
+    background: #ff4e4e;
+    border-radius: 2px;
+}
+
+.timeline-hint {
+    margin-top: 10px;
+    line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+    .timeline-page {
+        --label-width: 115px;
+    }
+
+    .timeline-workspace {
+        height: 55vh;
+    }
+
+    .timeline-controls {
+        width: 100%;
+    }
+}
+
+
+
+.timeline-playhead,
+.timeline-ruler,
+.timeline-ruler *,
+.timeline-track,
+.timeline-track * {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.properties-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+}
+
+.properties-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: .85rem;
+    font-weight: 600;
+}
+
+.properties-grid input:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+</style>
+
+<script>
+(() => {
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+        pixelsPerSecond: 100,
+        duration: 20,
+        playhead: 0,
+        playing: false,
+        selectedTrack: 1,
+        tracks: [
+            { id: 1, name: "Lighting", type: "Mixed" },
+            { id: 2, name: "Movement", type: "Effects" },
+            { id: 3, name: "Atmosphere", type: "Scenes" }
+        ],
+        clips: [
+            { id: 1, track: 1, start: 0, duration: 4,
+              name: "Opening Scene", type: "scene" },
+            { id: 2, track: 1, start: 5, duration: 3,
+              name: "Color Fade", type: "fade" },
+            { id: 3, track: 2, start: 2, duration: 8,
+              name: "Movement Sequence", type: "sequence" },
+            { id: 4, track: 2, start: 12, duration: 2,
+              name: "Strobe", type: "strobe" },
+            { id: 5, track: 3, start: 0, duration: 10,
+              name: "Ambient Scene", type: "scene" }
+        ],
+        selectedClip: null,
+        nextTrackId: 4,
+        nextClipId: 6,
+        raf: null,
+        lastFrame: null,
+        drag: null
+    };
+
+    const scroll = $("timelineScroll");
+    const content = $("timelineContent");
+
+    function formatTime(seconds) {
+        const ms = Math.floor(seconds * 1000);
+        const minutes = Math.floor(ms / 60000);
+        const remainingSeconds = Math.floor(ms / 1000) % 60;
+        const remainder = ms % 1000;
+
+        return String(minutes).padStart(2, "0") + ":" +
+            String(remainingSeconds).padStart(2, "0") + "." +
+            String(remainder).padStart(3, "0");
+    }
+
+    function totalWidth() {
+        return Math.ceil(state.duration * state.pixelsPerSecond);
+    }
+
+    function render() {
+        const width = totalWidth();
+        const trackHeight = 58;
+
+        content.style.width = width + "px";
+        $("timelineRuler").style.width = width + "px";
+                
+        $("timelineTracks").innerHTML = state.tracks.map(track => `
+            <div class="timeline-track"
+                data-track="${track.id}"
+                style="width:${width}px; --second-width:${state.pixelsPerSecond}px">
+            </div>
+        `).join("");
+
+        $("trackLabels").innerHTML = state.tracks.map(track => `
+            <div class="timeline-track-label"
+                data-track-label="${track.id}"
+                style="${state.selectedTrack === track.id
+                    ? 'background:rgba(70,140,220,.22);' : ''}">
+                <strong>${escapeHtml(track.name)}</strong>
+                <small>${escapeHtml(track.type)}</small>
+            </div>
+        `).join("");
+
+                
+        $("timelineDurationInput").addEventListener("change", event => {
+            const value = Number(event.target.value);
+
+            if (!Number.isFinite(value) || value < 1) {
+                event.target.value = state.duration;
+                return;
+            }
+
+            state.duration = value;
+            state.playhead = Math.min(state.playhead, state.duration);
+
+            render();
+        });
+
+        $("trackLabels").querySelectorAll("[data-track-label]").forEach(label => {
+            label.addEventListener("click", () => {
+                state.selectedTrack = Number(label.dataset.trackLabel);
+                render();
+            });
+
+            label.addEventListener("dblclick", event => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const trackId = Number(label.dataset.trackLabel);
+                const track = state.tracks.find(item => item.id === trackId);
+                if (!track) return;
+
+                const nameElement = label.querySelector("strong");
+                const input = document.createElement("input");
+
+                input.type = "text";
+                input.className = "timeline-inline-input";
+                input.value = track.name;
+                nameElement.replaceWith(input);
+
+                input.focus();
+                input.select();
+
+                let finished = false;
+
+                function finish(save) {
+                    if (finished) return;
+                    finished = true;
+
+                    if (save && input.value.trim()) {
+                        track.name = input.value.trim();
+                    }
+
+                    render();
+                }
+
+                input.addEventListener("keydown", event => {
+                    if (event.key === "Enter") {
+                        event.preventDefault();
+                        finish(true);
+                    }
+
+                    if (event.key === "Escape") {
+                        event.preventDefault();
+                        finish(false);
+                    }
+                });
+
+                input.addEventListener("blur", () => finish(true));
+            });
+        });
+
+
+
+        const ruler = $("timelineRuler");
+        ruler.innerHTML = "";
+
+        const interval = state.pixelsPerSecond < 45 ? 5 : 1;
+
+        for (let second = 0; second <= state.duration; second += interval) {
+            const tick = document.createElement("div");
+            tick.className = "timeline-tick";
+            tick.style.left = (second * state.pixelsPerSecond) + "px";
+            tick.textContent = second + "s";
+            ruler.appendChild(tick);
+        }
+
+        state.clips.forEach(clip => {
+            const track = $("timelineTracks").querySelector(
+                `[data-track="${clip.track}"]`
+            );
+            if (!track) return;
+
+            const element = document.createElement("div");
+            element.className = `timeline-clip clip-${clip.type}` +
+                (state.selectedClip === clip.id ? " selected" : "");
+            element.dataset.clip = clip.id;
+            element.style.left =
+                (clip.start * state.pixelsPerSecond) + "px";
+            element.style.width =
+                Math.max(24, clip.duration * state.pixelsPerSecond) + "px";
+
+            element.innerHTML = `
+                <span>${escapeHtml(clip.name)}</span>
+                <span class="clip-type">${clip.duration.toFixed(2)} s</span>
+                <span class="clip-resize" title="Resize clip"></span>
+            `;
+
+            element.addEventListener("pointerdown", startDrag);
+            element.addEventListener("click", () => {
+                state.selectedClip = clip.id;
+                render();
+            });
+
+            track.appendChild(element);
+        });
+
+                
+        const properties = $("timelineProperties");
+                
+        const selectedClip = state.clips.find(
+            clip => clip.id === state.selectedClip
+        );
+
+        const trackNameInput = $("propertyTrackName");
+        const descriptionInput = $("propertyTrackDescription");
+        const trackTypeInput = $("propertyTrackType");
+
+        if (selectedClip) {
+            const selectedTrack = state.tracks.find(
+                track => track.id === selectedClip.track
+            );
+
+            $("selectedClipType").textContent =
+                selectedClip.type.toUpperCase();
+
+            trackNameInput.disabled = false;
+            descriptionInput.disabled = false;
+            trackTypeInput.disabled = false;
+
+            trackNameInput.value = selectedTrack?.name || "";
+            descriptionInput.value = selectedTrack?.description || "";
+            trackTypeInput.value = selectedTrack?.type || "Mixed";
+        } else {
+            $("selectedClipType").textContent = "-";
+
+            trackNameInput.disabled = true;
+            descriptionInput.disabled = true;
+            trackTypeInput.disabled = true;
+
+            trackNameInput.value = "";
+            descriptionInput.value = "";
+            trackTypeInput.value = "Mixed";
+        }
+                
+                
+        function getSelectedTrack() {
+            const clip = state.clips.find(
+                item => item.id === state.selectedClip
+            );
+
+            if (!clip) return null;
+
+            return state.tracks.find(
+                track => track.id === clip.track
+            );
+        }
+
+        $("propertyTrackName").addEventListener("change", event => {
+            const track = getSelectedTrack();
+            if (!track) return;
+
+            const value = event.target.value.trim();
+            if (value) track.name = value;
+
+            render();
+        });
+
+        $("propertyTrackDescription").addEventListener("change", event => {
+            const track = getSelectedTrack();
+            if (!track) return;
+
+            track.description = event.target.value.trim();
+            render();
+        });
+
+        $("propertyTrackType").addEventListener("change", event => {
+            const track = getSelectedTrack();
+            if (!track) return;
+
+            track.type = event.target.value;
+            render();
+        });
+
+
+
+        updatePlayhead();
+        $("zoomLabel").textContent =
+            Math.round(state.pixelsPerSecond) + "%";
+        $("durationLabel").textContent = formatTime(state.duration);
+    }
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, char => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;",
+            '"': "&quot;", "'": "&#39;"
+        })[char]);
+    }
+
+    function updatePlayhead() {
+        $("timelinePlayhead").style.left =
+            (state.playhead * state.pixelsPerSecond) + "px";
+        $("positionLabel").textContent = formatTime(state.playhead);
+    }
+
+        
+    function startDrag(event) {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        event.stopPropagation();
+
+        const element = event.currentTarget;
+        const id = Number(element.dataset.clip);
+        const clip = state.clips.find(item => item.id === id);
+        if (!clip) return;
+
+        state.selectedClip = id;
+        state.selectedTrack = clip.track;
+
+        state.drag = {
+            id,
+            pointerX: event.clientX,
+            start: clip.start,
+            duration: clip.duration,
+            track: clip.track,
+            resize: event.target.classList.contains("clip-resize")
+        };
+
+        render();
+    }
+
+    function hasCollision(clip, start, trackId) {
+        const end = start + clip.duration;
+
+        return state.clips.some(other => {
+            if (other.id === clip.id || other.track !== trackId) {
+                return false;
+            }
+
+            const otherEnd = other.start + other.duration;
+
+            return start < otherEnd && end > other.start;
+        });
+    }
+
+    window.addEventListener("pointermove", event => {
+        if (!state.drag) return;
+
+        const drag = state.drag;
+        const clip = state.clips.find(item => item.id === drag.id);
+        if (!clip) return;
+
+        const delta =
+            (event.clientX - drag.pointerX) / state.pixelsPerSecond;
+
+        let nextStart = drag.start;
+        let nextDuration = drag.duration;
+        let nextTrack = drag.track;
+
+                
+        const step = event.shiftKey ? 0.25 : 0.01;
+
+        function snap(value, step) {
+            return Math.round(value / step) * step;
+        }
+
+        if (drag.resize) {
+            nextDuration = Math.max(
+                step,
+                snap(drag.duration + delta, step)
+            );
+        } else {
+            nextStart = Math.max(
+                0,
+                snap(drag.start + delta, step)
+            );
+
+            const tracksRect = $("timelineTracks").getBoundingClientRect();
+            const relativeY = event.clientY - tracksRect.top;
+            const trackIndex = Math.floor(relativeY / 58);
+
+            if (trackIndex >= 0 && trackIndex < state.tracks.length) {
+                nextTrack = state.tracks[trackIndex].id;
+            }
+        }
+
+
+        const oldStart = clip.start;
+        const oldDuration = clip.duration;
+        const oldTrack = clip.track;
+
+        clip.start = nextStart;
+        clip.duration = nextDuration;
+        clip.track = nextTrack;
+
+        if (hasCollision(clip, nextStart, nextTrack)) {
+            clip.start = oldStart;
+            clip.duration = oldDuration;
+            clip.track = oldTrack;
+        } else {
+            state.selectedTrack = clip.track;
+
+            const end = clip.start + clip.duration;
+            if (end > state.duration) {
+                state.duration = Math.ceil(end / 5) * 5;
+            }
+        }
+
+        render();
+    });
+
+    window.addEventListener("pointerup", () => {
+        state.drag = null;
+    });
+
+
+        
+    $("timelineRuler").addEventListener("pointerdown", event => {
+        if (event.button !== 0) return;
+
+        event.preventDefault();
+
+        const rect = $("timelineRuler").getBoundingClientRect();
+        const x = event.clientX - rect.left + scroll.scrollLeft;
+
+        state.playhead = Math.max(
+            0,
+            Math.min(state.duration, x / state.pixelsPerSecond)
+        );
+
+        updatePlayhead();
+    });
+
+
+    $("addTrackBtn").addEventListener("click", () => {
+        const id = state.nextTrackId++;
+        state.tracks.push({
+            id,
+            name: "Track " + id,
+            type: "Mixed"
+        });
+        render();
+    });
+
+    $("addClipBtn").addEventListener("click", () => {
+        if (!state.tracks.length) return;
+
+        const types = ["scene", "fade", "sequence", "strobe"];
+        const type = types[state.nextClipId % types.length];
+        const id = state.nextClipId++;
+        const track = state.tracks[
+            (id - 1) % state.tracks.length
+        ];
+
+        state.clips.push({
+            id,
+            track: track.id,
+            start: Math.round(state.playhead * 4) / 4,
+            duration: 2,
+            name: "New " + type.charAt(0).toUpperCase() + type.slice(1),
+            type
+        });
+
+        state.selectedClip = id;
+        render();
+    });
+
+    $("zoomInBtn").addEventListener("click", () => {
+        state.pixelsPerSecond = Math.min(
+            400, state.pixelsPerSecond * 1.25
+        );
+        render();
+    });
+
+    $("zoomOutBtn").addEventListener("click", () => {
+        state.pixelsPerSecond = Math.max(
+            25, state.pixelsPerSecond / 1.25
+        );
+        render();
+    });
+
+    function stopPlayback() {
+        state.playing = false;
+        state.lastFrame = null;
+
+        if (state.raf !== null) {
+            cancelAnimationFrame(state.raf);
+            state.raf = null;
+        }
+
+        $("playBtn").textContent = "▶ Play";
+        $("statusLabel").textContent = "Preview stopped";
+    }
+
+    function playbackFrame(timestamp) {
+        if (!state.playing) return;
+
+        if (state.lastFrame !== null) {
+            state.playhead += (timestamp - state.lastFrame) / 1000;
+        }
+        state.lastFrame = timestamp;
+
+        if (state.playhead >= state.duration) {
+            state.playhead = state.duration;
+            updatePlayhead();
+            stopPlayback();
+            return;
+        }
+
+        updatePlayhead();
+        state.raf = requestAnimationFrame(playbackFrame);
+    }
+
+    $("playBtn").addEventListener("click", () => {
+        if (state.playing) return;
+
+        if (state.playhead >= state.duration) {
+            state.playhead = 0;
+        }
+
+        state.playing = true;
+        state.lastFrame = null;
+        $("playBtn").textContent = "▶ Playing";
+        $("statusLabel").textContent = "Visual preview running";
+        state.raf = requestAnimationFrame(playbackFrame);
+    });
+
+    $("stopBtn").addEventListener("click", () => {
+        stopPlayback();
+        state.playhead = 0;
+        updatePlayhead();
+    });
+
+        
+    $("deleteClipBtn").addEventListener("click", () => {
+        if (state.selectedClip === null) return;
+
+        state.clips = state.clips.filter(
+            clip => clip.id !== state.selectedClip
+        );
+
+        state.selectedClip = null;
+        render();
+    });
+
+    $("deleteTrackBtn").addEventListener("click", () => {
+        if (state.selectedTrack === null) return;
+        if (state.tracks.length <= 1) {
+            alert("At least one track must remain.");
+            return;
+        }
+
+        const trackId = state.selectedTrack;
+
+        state.tracks = state.tracks.filter(
+            track => track.id !== trackId
+        );
+
+        state.clips = state.clips.filter(
+            clip => clip.track !== trackId
+        );
+
+        state.selectedTrack = state.tracks[0].id;
+        state.selectedClip = null;
+        render();
+    });
+
+    window.addEventListener("keydown", event => {
+        const tag = event.target.tagName;
+
+        if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
+
+        if (event.key === "Delete" || event.key === "Backspace") {
+            if (state.selectedClip !== null) {
+                event.preventDefault();
+
+                state.clips = state.clips.filter(
+                    clip => clip.id !== state.selectedClip
+                );
+
+                state.selectedClip = null;
+                render();
+            }
+        }
+    });
+        
+    $("durationLabel").addEventListener("dblclick", () => {
+        const label = $("durationLabel");
+        const input = document.createElement("input");
+
+        input.type = "number";
+        input.min = "1";
+        input.max = "3600";
+        input.step = "0.01";//instead of "0.25"
+        input.value = String(state.duration);
+        input.className = "timeline-inline-input";
+        input.style.width = "100px";
+
+        label.replaceWith(input);
+        input.focus();
+        input.select();
+
+        let finished = false;
+
+        function finish(save) {
+            if (finished) return;
+            finished = true;
+
+            if (save) {
+                const value = Number(input.value);
+
+                if (Number.isFinite(value) && value >= 1 && value <= 3600) {
+                    state.duration = value;
+
+                    state.clips.forEach(clip => {
+                        if (clip.start >= state.duration) {
+                            clip.start = Math.max(0, state.duration - 0.25);
+                        }
+
+                        if (clip.start + clip.duration > state.duration) {
+                            clip.duration = Math.max(
+                                0.25,
+                                state.duration - clip.start
+                            );
+                        }
+                    });
+
+                    state.playhead = Math.min(
+                        state.playhead,
+                        state.duration
+                    );
+                }
+            }
+
+            render();
+        }
+
+        input.addEventListener("keydown", event => {
+            if (event.key === "Enter") finish(true);
+            if (event.key === "Escape") finish(false);
+        });
+
+        input.addEventListener("blur", () => finish(true));
+    });
+
+
+    render();
+})();
+</script>
+{% endblock %}

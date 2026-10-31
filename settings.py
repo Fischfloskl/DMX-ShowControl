@@ -4,9 +4,11 @@ import os
 
 SETTINGS_FILE = "data/settings.json"
 
+VERSION = 1
 
 DEFAULT_SETTINGS = {
 
+    "app-version": "2026.1.1",
     "network_mode": "lan",
     "port": 5000,
     "refresh_rate": 50,

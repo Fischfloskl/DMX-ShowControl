@@ -20,27 +20,6 @@
         </div>
     </div>
 
-    <div class="card">
-        <h2>Fade Mode</h2>
-
-        <div class="mode-selector">
-            {% for mode_option, title, description in [
-                ('merge', 'Merge', 'Change only active channels'),
-                ('overwrite', 'Overwrite', 'Replace the entire device'),
-                ('exclusive', 'Exclusive', 'Take control of the device')
-            ] %}
-                <label class="mode-option">
-                    <input type="radio" name="mode" value="{{ mode_option }}"
-                        {% if fade.get('mode', 'merge') == mode_option %}checked{% endif %}>
-                    <div class="mode-card">
-                        <strong>{{ title }}</strong>
-                        <span>{{ description }}</span>
-                    </div>
-                </label>
-            {% endfor %}
-        </div>
-    </div>
-
     {% set functions = device.channel_functions if device.channel_functions is defined else [] %}
 
     <div class="card">

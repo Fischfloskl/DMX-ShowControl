@@ -621,7 +621,14 @@ DMX-ShowControl
                         onclick="window.open('https://github.com/Fischfloskl/DMX-ShowControl/', '_blank')">
                     About DMX-ShowControl
                 </button>
+                <button type="button" class="dropdown-action">Version: {{ settings.get('app-version') }}</button>
             </div>
+        </div>
+        <div class="menu-group">
+            <button class="menu-trigger danger" type="button" aria-haspopup="true" aria-expanded="false" style="color: rgb(255, 74, 74);"
+                        onclick="window.location.href='/dmx/clear'">
+                Clear DMX
+            </button>
         </div>
     </div>
 
