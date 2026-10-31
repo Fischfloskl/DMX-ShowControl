@@ -164,7 +164,7 @@ Additional DMX interfaces and hardware may be supported in the future.
 * **Arduino**
 * **Serial communication**
 * **DMX**
-* **MIDI** *(in development)*
+* **MIDI**
 
 ---
 
@@ -176,7 +176,7 @@ Additional DMX interfaces and hardware may be supported in the future.
 * [x] Add MIDI
 * [ ] Add 3D-Stage-Editor
 * [x] Add Music Recognition by Beat
-* [ ] Improve Music Recognition Workflow + EN UI translation
+* [x] Improve Music Recognition Workflow + EN UI translation
 * [ ] Improve DMX fixture support
 * [ ] Improve the song/show workflow
 * [ ] Improve mobile-friendly remote control
